@@ -1,0 +1,40 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Finance</title>
+
+    <!-- Bootstrap RTL -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <div style="background:red;color:white;padding:10px;text-align:center">
+    TEST BASE.HTML
+</div>
+
+
+<!-- Navbar -->
+<nav class="navbar navbar-dark bg-dark px-4 d-flex justify-content-between">
+    <span class="navbar-brand fw-bold">Smart Finance</span>
+
+    {% if user.is_authenticated %}
+    <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-light btn-sm">
+            🚪 تسجيل الخروج
+        </button>
+    </form>
+    {% endif %}
+</nav>
+
+<!-- Page Content -->
+<div class="container mt-4">
+    {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>

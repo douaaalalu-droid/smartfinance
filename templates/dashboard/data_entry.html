@@ -1,0 +1,81 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+
+<a href="{% url 'create_invoice' %}" class="btn btn-primary mb-3">
+➕ إدخال فاتورة
+</a>
+
+<h3 class="mb-4">إدخال قيد محاسبي</h3>
+<hr>
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        بيانات القيد المحاسبي
+    </div>
+
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label>نوع العملية</label>
+                    {{ form.entry_type }}
+                </div>
+
+                <div class="col-md-4">
+                    <label>المبلغ</label>
+                    {{ form.amount }}
+                </div>
+
+                <div class="col-md-4">
+                    <label>اسم الحساب</label>
+                    {{ form.account_name }}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label>الوصف</label>
+                {{ form.description }}
+            </div>
+
+            <button class="btn btn-success">💾 حفظ القيد</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        القيود التي قمت بإدخالها
+    </div>
+
+    <div class="card-body">
+        <table class="table table-bordered text-center">
+            <thead class="table-secondary">
+                <tr>
+                    <th>النوع</th>
+                    <th>المبلغ</th>
+                    <th>الحساب</th>
+                    <th>التاريخ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td>{{ entry.get_entry_type_display }}</td>
+                    <td>{{ entry.amount }}</td>
+                    <td>{{ entry.account_name }}</td>
+                    <td>{{ entry.created_at|date:"Y-m-d" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4">لا توجد قيود</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends 'dashboard/base.html' %}
+{% block content %}
+
+<h3 class="mb-4">لوحة تحكم المدير المالي</h3>
+<hr>
+
+<div class="row mb-4">
+
+    <div class="col-md-4">
+        <div class="card bg-success text-white text-center">
+            <div class="card-body">
+                <h6>إجمالي الإيرادات</h6>
+                <p class="fs-4">{{ income }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card bg-danger text-white text-center">
+            <div class="card-body">
+                <h6>إجمالي المصروفات</h6>
+                <p class="fs-4">{{ expense }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card bg-primary text-white text-center">
+            <div class="card-body">
+                <h6>صافي الربح</h6>
+                <p class="fs-4">{{ profit }}</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        أدوات المدير المالي
+    </div>
+    <div class="card-body">
+        <a href="{% url 'accountant_invoices' %}" class="btn btn-primary me-2">📄 عرض الفواتير</a>
+        <a href="#" class="btn btn-secondary">📊 التقارير</a>
+    </div>
+</div>
+
+{% endblock %}

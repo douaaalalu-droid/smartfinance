@@ -1,0 +1,19 @@
+body {
+    font-family: "Cairo", sans-serif;
+}
+
+.card {
+    border-radius: 12px;
+}
+
+.card-header {
+    font-weight: bold;
+}
+
+.table th {
+    background-color: #f1f1f1;
+}
+
+.btn {
+    border-radius: 8px;
+}

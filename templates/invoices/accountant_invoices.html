@@ -1,0 +1,91 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold">📄 مراجعة الفواتير</h3>
+
+    <!-- زر إضافة فاتورة جديدة (للمحاسب أيضًا) -->
+    <a href="{% url 'create_invoice' %}" class="btn btn-primary">
+        ➕ إضافة فاتورة جديدة
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-dark text-white">
+        قائمة الفواتير المدخلة
+    </div>
+
+    <div class="card-body">
+
+        <table class="table table-bordered table-striped text-center align-middle">
+            <thead class="table-secondary">
+                <tr>
+                    <th>رقم الفاتورة</th>
+                    <th>نوع الفاتورة</th>
+                    <th>العميل / المورد</th>
+                    <th>المبلغ الإجمالي</th>
+                    <th>تاريخ الفاتورة</th>
+                    <th>أدخلت بواسطة</th>
+                    <th>الحالة</th>
+                    <th>الإجراءات</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for invoice in invoices %}
+                <tr>
+                    <td>{{ invoice.invoice_number }}</td>
+                    <td>{{ invoice.get_invoice_type_display }}</td>
+                    <td>{{ invoice.customer_name }}</td>
+                    <td class="fw-bold text-primary">
+                        {{ invoice.total_amount }}
+                    </td>
+                    <td>{{ invoice.invoice_date }}</td>
+                    <td>{{ invoice.created_by.username }}</td>
+
+                    <!-- الحالة -->
+                    <td>
+                        {% if invoice.is_approved %}
+                            <span class="badge bg-success">✔ معتمدة</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">⏳ بانتظار الاعتماد</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- الإجراءات -->
+                    <td class="d-flex justify-content-center gap-2">
+
+                        <!-- زر عرض الفاتورة -->
+                        <a href="{% url 'invoice_detail' invoice.id %}"
+                           class="btn btn-sm btn-info">
+                            👁 عرض
+                        </a>
+
+                        <!-- زر الاعتماد -->
+                        {% if not invoice.is_approved %}
+                            <a href="{% url 'approve_invoice' invoice.id %}"
+                               class="btn btn-sm btn-success">
+                                ✔ اعتماد
+                            </a>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+
+                    </td>
+                </tr>
+
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-muted">
+                        لا توجد فواتير
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends 'dashboard/base.html' %}
+{% block content %}
+
+<h3 class="mb-4">لوحة تحكم مدير النظام</h3>
+<hr>
+
+<div class="row mb-4">
+
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body text-center">
+                <h6>عدد المستخدمين</h6>
+                <p class="fs-4">{{ users_count }}</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+        آخر العمليات المالية
+    </div>
+    <div class="card-body">
+
+        <table class="table table-bordered table-striped text-center">
+            <thead class="table-secondary">
+                <tr>
+                    <th>#</th>
+                    <th>النوع</th>
+                    <th>القيمة</th>
+                    <th>المستخدم</th>
+                    <th>التاريخ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td>{{ entry.id }}</td>
+                    <td>{{ entry.get_entry_type_display }}</td>
+                    <td>{{ entry.amount }}</td>
+                    <td>{{ entry.created_by.username }}</td>
+                    <td>{{ entry.created_at|date:"Y-m-d" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">لا توجد عمليات</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        إدارة المستخدمين
+    </div>
+    <div class="card-body">
+       <a href="/admin/auth/user/add/" class="btn btn-success me-2">
+    ➕ إضافة مستخدم
+</a>
+
+       <a href="/admin/" class="btn btn-secondary">
+    ⚙️ لوحة إدارة النظام
+</a>
+
+    </div>
+</div>
+
+{% endblock %}

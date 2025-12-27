@@ -1,0 +1,71 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+
+<a href="{% url 'accountant_invoices' %}" class="btn btn-dark mb-3">
+📄 مراجعة الفواتير
+</a>
+
+<h3 class="mb-4">لوحة المحاسب</h3>
+<hr>
+
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        إضافة قيد محاسبي
+    </div>
+
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    {{ form.entry_type }}
+                </div>
+                <div class="col-md-4">
+                    {{ form.amount }}
+                </div>
+                <div class="col-md-4">
+                    {{ form.account_name }}
+                </div>
+            </div>
+
+            {{ form.description }}
+
+            <button class="btn btn-primary mt-3">حفظ</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-dark text-white">
+        جميع القيود
+    </div>
+
+    <div class="card-body">
+        <table class="table table-bordered text-center">
+            <thead class="table-secondary">
+                <tr>
+                    <th>النوع</th>
+                    <th>المبلغ</th>
+                    <th>الحساب</th>
+                    <th>أدخل بواسطة</th>
+                    <th>التاريخ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td>{{ entry.get_entry_type_display }}</td>
+                    <td>{{ entry.amount }}</td>
+                    <td>{{ entry.account_name }}</td>
+                    <td>{{ entry.created_by.username }}</td>
+                    <td>{{ entry.created_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

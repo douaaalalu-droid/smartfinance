@@ -1,0 +1,58 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}عرض الفاتورة{% endblock %}
+
+{% block content %}
+
+<div class="card shadow">
+    <div class="card-header bg-primary text-white fw-bold">
+        🧾 بيانات الفاتورة
+    </div>
+
+    <div class="card-body row">
+        <div class="col-md-3"><strong>رقم الفاتورة:</strong> {{ invoice.invoice_number }}</div>
+        <div class="col-md-3"><strong>النوع:</strong> {{ invoice.get_invoice_type_display }}</div>
+        <div class="col-md-3"><strong>التاريخ:</strong> {{ invoice.invoice_date }}</div>
+        <div class="col-md-3"><strong>العميل:</strong> {{ invoice.customer_name }}</div>
+    </div>
+</div>
+
+<div class="card shadow mt-4">
+    <div class="card-header bg-dark text-white fw-bold">
+        📦 بنود الفاتورة
+    </div>
+
+    <div class="card-body">
+        <table class="table table-bordered text-center align-middle">
+            <thead class="table-secondary">
+                <tr>
+                    <th>#</th>
+                    <th>الوصف</th>
+                    <th>الكمية</th>
+                    <th>سعر الوحدة</th>
+                    <th>الإجمالي</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ item.description }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.unit_price }}</td>
+                    <td>{{ item.total_price }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">لا توجد بنود</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="text-end fw-bold fs-5 mt-3">
+            💰 الإجمالي الكلي: {{ invoice.total_amount }}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
