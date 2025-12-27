@@ -55,4 +55,3 @@ echo "GitHub repository linked."
 git branch -M main
 git push -u origin main
 echo "Project pushed to GitHub successfully!"
-

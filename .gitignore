@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Django logs, env, virtualenv
+*.log
+*.pot
+*.coverage
+*.mo
+*.env
+*.venv
+env/
+venv/
+ENV/
+
+# Static files (optional)
+staticfiles/
+media/
