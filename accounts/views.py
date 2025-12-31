@@ -130,49 +130,52 @@ def data_entry_dashboard(request):
 @role_required('accountant', 'data_entry')
 def create_invoice(request):
 
+    invoice_form = InvoiceForm()
+    formset = InvoiceItemFormSet(queryset=InvoiceItem.objects.none())
+
     if request.method == 'POST':
         invoice_form = InvoiceForm(request.POST)
-        formset = InvoiceItemFormSet(request.POST)
 
-        if invoice_form.is_valid() and formset.is_valid():
+        if invoice_form.is_valid():
             with transaction.atomic():
                 invoice = invoice_form.save(commit=False)
                 invoice.created_by = request.user
                 invoice.total_amount = 0
                 invoice.save()
 
-                total = 0
-                items = formset.save(commit=False)
+                formset = InvoiceItemFormSet(request.POST, instance=invoice)
 
-                for item in items:
-                    item.invoice = invoice
-                    item.save()
-                    total += item.total_price
+                if formset.is_valid():
+                    items = formset.save(commit=False)
 
-                invoice.total_amount = total
-                invoice.save()
+                    total = 0
+                    for item in items:
+                        item.invoice = invoice
+                        item.save()  # total_price يُحسب في model
+                        total += item.total_price
 
-                messages.success(request, "✅ تم حفظ الفاتورة بنجاح")
+                    invoice.total_amount = total
+                    invoice.save()
 
-                if request.user.role == 'accountant':
-                    return redirect('accountant_invoices')
-                return redirect('data_entry_dashboard')
+                    messages.success(request, "✅ تم حفظ الفاتورة بنجاح")
 
-        # 👇 مهم جدًا: هنا لا نعيد formset فارغ
-        # بل نعيد نفس البيانات المدخلة
+                    if request.user.role == 'accountant':
+                        return redirect('accountant_invoices')
+                    else:
+                        return redirect('data_entry_dashboard')
+
+                else:
+                    print("Formset errors:", formset.errors)
+
         else:
             print("Invoice errors:", invoice_form.errors)
-            print("Formset errors:", formset.errors)
-
-    else:
-        invoice_form = InvoiceForm()
-        formset = InvoiceItemFormSet()
 
     return render(request, 'invoices/create_invoice.html', {
         'invoice_form': invoice_form,
         'formset': formset
     })
-# 📄 قائمة الفواتير
+
+#  قائمة الفواتير
 @login_required
 @role_required('accountant')
 def accountant_invoices(request):
@@ -182,7 +185,7 @@ def accountant_invoices(request):
     })
 
 
-# 👁 تفاصيل الفاتورة
+#  تفاصيل الفاتورة
 @login_required
 @role_required('accountant')
 def invoice_detail(request, invoice_id):
@@ -195,7 +198,7 @@ def invoice_detail(request, invoice_id):
     })
 
 
-# ✅ اعتماد فاتورة
+#  اعتماد فاتورة
 @login_required
 @role_required('accountant')
 def approve_invoice(request, invoice_id):
@@ -217,7 +220,7 @@ def approve_invoice(request, invoice_id):
     return redirect('accountant_invoices')
 
 
-# 🚪 تسجيل الخروج
+#  تسجيل الخروج
 @login_required
 def logout_view(request):
     logout(request)

@@ -36,7 +36,6 @@ class Invoice(models.Model):
     def __str__(self):
         return self.invoice_number
 
-
 class InvoiceItem(models.Model):
     invoice = models.ForeignKey(
         Invoice,
@@ -49,9 +48,8 @@ class InvoiceItem(models.Model):
     total_price = models.DecimalField(max_digits=14, decimal_places=2, editable=False)
 
     def save(self, *args, **kwargs):
-        self.total_price = Decimal(self.quantity) * self.unit_price
+        self.total_price = self.quantity * self.unit_price
         super().save(*args, **kwargs)
-
 
 class FinancialEntry(models.Model):
     ENTRY_TYPES = (
