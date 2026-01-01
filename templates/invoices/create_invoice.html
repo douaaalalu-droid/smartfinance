@@ -11,13 +11,42 @@
         <div class="card-header bg-primary text-white">
             بيانات الفاتورة
         </div>
-        <div class="card-body row">
-            <div class="col-md-3">{{ invoice_form.invoice_number.label_tag }} {{ invoice_form.invoice_number }}</div>
-            <div class="col-md-3">{{ invoice_form.invoice_type.label_tag }} {{ invoice_form.invoice_type }}</div>
-            <div class="col-md-3">{{ invoice_form.customer_name.label_tag }} {{ invoice_form.customer_name }}</div>
-            <div class="col-md-3">{{ invoice_form.invoice_date.label_tag }} {{ invoice_form.invoice_date }}</div>
-        </div>
+  <div class="card-body row">
+         <div class="col-md-3 mb-3">
+        {{ invoice_form.invoice_number.label_tag }}
+        {{ invoice_form.invoice_number }}
+
+        {% if invoice_form.invoice_number.errors %}
+            <div class="text-danger mt-1">
+                {{ invoice_form.invoice_number.errors }}
+            </div>
+        {% endif %}
     </div>
+
+        <div class="col-md-3 mb-3">
+        {{ invoice_form.invoice_type.label_tag }}
+        {{ invoice_form.invoice_type }}
+    </div>
+
+    <!-- اسم العميل -->
+    <div class="col-md-3 mb-3">
+        {{ invoice_form.customer_name.label_tag }}
+        {{ invoice_form.customer_name }}
+    </div>
+
+    <!-- تاريخ الفاتورة -->
+    <div class="col-md-3 mb-3">
+        {{ invoice_form.invoice_date.label_tag }}
+        {{ invoice_form.invoice_date }}
+
+        {% if invoice_form.invoice_date.errors %}
+            <div class="text-danger mt-1">
+                {{ invoice_form.invoice_date.errors }}
+            </div>
+        {% endif %}
+    </div>
+
+</div>
 
     <div class="card">
         <div class="card-header bg-dark text-white">
