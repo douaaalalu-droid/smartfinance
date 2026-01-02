@@ -62,28 +62,141 @@
                         <th>الوصف</th>
                         <th>الكمية</th>
                         <th>سعر الوحدة</th>
+                        <th>الإجمالي</th>
+                        
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="invoice-items">
                     {% for form in formset %}
-                    <tr>
+                    <tr class="item-row">
                         <td>{{ form.description }}</td>
                         <td>{{ form.quantity }}</td>
                         <td>{{ form.unit_price }}</td>
+                        <td>
+                            <input type="text" class="form-control total-field" readonly>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm remove-row">
+                                🗑
+                            </button>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+            <div class="mt-3">
+                <button type="button" id="add-item" class="btn btn-outline-primary mt-2" >
+                     ➕ إضافة بند جديد
+                </button>
 
         </div>
+        <div class="mt-3 text-end">
+            <strong>الإجمالي الكلي</strong>
+            <span id="grand-total">0</span>
+        </div>
+
     </div>
+</div>
 
     <div class="mt-3 text-end">
         <button type="submit" class="btn btn-success">
             💾 حفظ الفاتورة
         </button>
     </div>
+    
+ <div id="empty-form" style="display:none;">
+    {{ formset.empty_form }}
+ </div>
 
 </form>
+<script>
+const itemsContainer = document.getElementById('invoice-items');
+const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
+const emptyFormTemplate = document.getElementById('empty-form').innerHTML;
+
+// تحديث الإجماليات
+function updateTotals() {
+    let grandTotal = 0;
+
+    document.querySelectorAll('.item-row').forEach(row => {
+        if (row.style.display === 'none') return;
+
+        const qty = row.querySelector('input[name$="quantity"]');
+        const price = row.querySelector('input[name$="unit_price"]');
+        const totalField = row.querySelector('.total-field');
+
+        if (!qty || !price) return;
+
+        const q = parseFloat(qty.value) || 0;
+        const p = parseFloat(price.value) || 0;
+
+        if (q === 0 || p === 0) {
+            totalField.value = '⚠';
+            return;
+        }
+
+        const total = q * p;
+        totalField.value = total.toFixed(2);
+        grandTotal += total;
+    });
+
+    document.getElementById('grand-total').innerText = grandTotal.toFixed(2);
+}
+
+// إضافة بند جديد
+document.getElementById('add-item').addEventListener('click', function () {
+    let formIndex = parseInt(totalFormsInput.value);
+
+    let newFormHtml = emptyFormTemplate.replace(/__prefix__/g, formIndex);
+
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = newFormHtml;
+
+    const row = document.createElement('tr');
+    row.classList.add('item-row');
+
+    tempDiv.querySelectorAll('input, select, textarea').forEach(input => {
+        const td = document.createElement('td');
+        td.appendChild(input);
+        row.appendChild(td);
+    });
+
+    const totalTd = document.createElement('td');
+    totalTd.innerHTML = `<input type="text" class="form-control total-field" readonly>`;
+    row.appendChild(totalTd);
+
+    const deleteTd = document.createElement('td');
+    deleteTd.innerHTML = `<button type="button" class="btn btn-danger btn-sm remove-row">🗑</button>`;
+    row.appendChild(deleteTd);
+
+    itemsContainer.appendChild(row);
+    totalFormsInput.value = formIndex + 1;
+});
+
+// حذف بند
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.remove-row');
+    if (!btn) return;
+
+    const row = btn.closest('.item-row');
+    row.style.display = 'none';
+
+    const inputs = row.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+        if (input.name.includes('DELETE')) {
+            input.checked = true;
+        }
+    });
+
+    updateTotals();
+});
+
+// تحديث تلقائي
+document.addEventListener('input', function (e) {
+    if (e.target.name?.includes('quantity') || e.target.name?.includes('unit_price')) {
+        updateTotals();
+    }
+});
+</script>
 
 {% endblock %}
