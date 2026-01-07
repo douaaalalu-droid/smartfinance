@@ -1,9 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User, FinancialEntry, Invoice, InvoiceItem
+from .models import User, Invoice, InvoiceItem, JournalEntry
 
 
-# 👤 المستخدم
+# المستخدم
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     model = User
@@ -15,24 +15,8 @@ class CustomUserAdmin(UserAdmin):
     add_fieldsets = UserAdmin.add_fieldsets + (
         ('الدور الوظيفي', {'fields': ('role',)}),
     )
-
-
-# 📒 القيود المحاسبية
-@admin.register(FinancialEntry)
-class FinancialEntryAdmin(admin.ModelAdmin):
-    list_display = (
-        'entry_type',
-        'amount',
-        'account_name',
-        'status',
-        'created_by',
-        'created_at',
-    )
-    list_filter = ('entry_type', 'status', 'created_at')
-    search_fields = ('account_name', 'description')
-
-
-# 🧾 الفواتير
+    
+#  الفواتير
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
     list_display = (
@@ -47,7 +31,7 @@ class InvoiceAdmin(admin.ModelAdmin):
     search_fields = ('invoice_number',)
 
 
-# 📦 بنود الفاتورة
+#  بنود الفاتورة
 @admin.register(InvoiceItem)
 class InvoiceItemAdmin(admin.ModelAdmin):
     list_display = (
@@ -57,4 +41,20 @@ class InvoiceItemAdmin(admin.ModelAdmin):
         'unit_price',
         'total_price',
     )
+
+# دفتر القيود 
+@admin.register(JournalEntry)
+class JournalEntryAdmin(admin.ModelAdmin):
+    list_display = (
+        'date',
+        'account_name',
+        'debit',
+        'credit',
+        'status',
+        'created_by',
+        'created_at',
+    )
+    list_filter = ('status', 'date')
+    search_fields = ('account_name', 'description')
+    readonly_fields = ('created_at',)
 

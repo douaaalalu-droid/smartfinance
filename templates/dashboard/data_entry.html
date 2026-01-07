@@ -1,12 +1,12 @@
 {% extends 'dashboard/base.html' %}
 
 {% block content %}
-
 <a href="{% url 'create_invoice' %}" class="btn btn-primary mb-3">
 ➕ إدخال فاتورة
 </a>
 
-<h3 class="mb-4">إدخال قيد محاسبي</h3>
+
+<h3 class="mb-4">إدخال قيد في دفتر القيود</h3>
 <hr>
 
 <div class="card mb-4">
@@ -20,13 +20,8 @@
 
             <div class="row mb-3">
                 <div class="col-md-4">
-                    <label>نوع العملية</label>
-                    {{ form.entry_type }}
-                </div>
-
-                <div class="col-md-4">
-                    <label>المبلغ</label>
-                    {{ form.amount }}
+                    <label>التاريخ</label>
+                    {{ form.date }}
                 </div>
 
                 <div class="col-md-4">
@@ -35,12 +30,23 @@
                 </div>
             </div>
 
-            <div class="mb-3">
-                <label>الوصف</label>
-                {{ form.description }}
-            </div>
+    <div class="mb-3">
+        <label>نوع القيد</label><br>
+        {{ form.entry_side }}
+    </div>
 
-            <button class="btn btn-success">💾 حفظ القيد</button>
+    <div class="mb-3">
+        <label>المبلغ</label>
+        {{ form.amount }}
+    </div>
+
+    <div class="mb-3">
+        <label>الوصف</label>
+        {{ form.description }}
+    </div>
+
+    <button class="btn btn-success">💾 حفظ القيد</button>
+</form>
         </form>
     </div>
 </div>
@@ -54,23 +60,31 @@
         <table class="table table-bordered text-center">
             <thead class="table-secondary">
                 <tr>
-                    <th>النوع</th>
-                    <th>المبلغ</th>
-                    <th>الحساب</th>
                     <th>التاريخ</th>
+                    <th>الحساب</th>
+                    <th>مدين</th>
+                    <th>دائن</th>
+                    <th>الحالة</th>
                 </tr>
             </thead>
             <tbody>
                 {% for entry in entries %}
                 <tr>
-                    <td>{{ entry.get_entry_type_display }}</td>
-                    <td>{{ entry.amount }}</td>
+                    <td>{{ entry.date }}</td>
                     <td>{{ entry.account_name }}</td>
-                    <td>{{ entry.created_at|date:"Y-m-d" }}</td>
+                    <td>{{ entry.debit }}</td>
+                    <td>{{ entry.credit }}</td>
+                    <td>
+                        {% if entry.status == 'draft' %}
+                            🕒 مسودة
+                        {% else %}
+                            ✅ معتمد
+                        {% endif %}
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4">لا توجد قيود</td>
+                    <td colspan="5">لا توجد قيود</td>
                 </tr>
                 {% endfor %}
             </tbody>

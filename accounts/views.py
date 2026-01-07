@@ -7,9 +7,10 @@ from .models import InvoiceItem
 from django.contrib import messages
 from django.db.models import Sum
 
-from .models import User, FinancialEntry, Invoice, InvoiceItem 
+from .models import User, Invoice, InvoiceItem, JournalEntry
+
 from .forms import (
-    FinancialEntryForm,
+   JournalEntryForm,
     InvoiceForm,
     InvoiceItemFormSet
 )
@@ -57,7 +58,7 @@ def login_view(request):
 @role_required('admin')
 def admin_dashboard(request):
     users = User.objects.all()
-    entries = FinancialEntry.objects.select_related('created_by').order_by('-created_at')[:10]
+    entries = JournalEntry.objects.select_related('created_by').order_by('-created_at')[:10]
 
     context = {
         'users_count': users.count(),
@@ -69,16 +70,17 @@ def admin_dashboard(request):
 @login_required
 @role_required('accountant')
 def accountant_dashboard(request):
-    form = FinancialEntryForm(request.POST or None)
+    form = JournalEntryForm(request.POST or None)
 
     if request.method == 'POST' and form.is_valid():
         entry = form.save(commit=False)
+
         entry.created_by = request.user
-        entry.status = 'معتمد'
+        entry.status = 'draft'
         entry.save()
         return redirect('accountant_dashboard')
 
-    entries = FinancialEntry.objects.all().order_by('-created_at')
+    entries = JournalEntry.objects.all().order_by('-created_at')
 
     return render(request, 'dashboard/accountant.html', {
         'form': form,
@@ -91,8 +93,8 @@ def accountant_dashboard(request):
 @login_required
 @role_required('manager')
 def manager_dashboard(request):
-    income = FinancialEntry.objects.filter(entry_type='income').aggregate(total=Sum('amount'))['total'] or 0
-    expense = FinancialEntry.objects.filter(entry_type='expense').aggregate(total=Sum('amount'))['total'] or 0
+    income = JournalEntry.objects.filter(entry_type='income').aggregate(total=Sum('amount'))['total'] or 0
+    expense = JournalEntry.objects.filter(entry_type='expense').aggregate(total=Sum('amount'))['total'] or 0
 
     context = {
         'income': income,
@@ -101,21 +103,20 @@ def manager_dashboard(request):
     }
     return render(request, 'dashboard/manager.html', context)
 
-
-#  لوحة مدخل البيانات
+# لوحة مدخل البيانات مع دفتر القيود
 @login_required
 @role_required('data_entry')
 def data_entry_dashboard(request):
-    form = FinancialEntryForm(request.POST or None)
+    form = JournalEntryForm(request.POST or None)
 
     if request.method == 'POST' and form.is_valid():
         entry = form.save(commit=False)
         entry.created_by = request.user
-        entry.status = 'بانتظار المراجعة'
+        entry.status = 'draft'
         entry.save()
         return redirect('data_entry_dashboard')
 
-    entries = FinancialEntry.objects.filter(
+    entries = JournalEntry.objects.filter(
         created_by=request.user
     ).order_by('-created_at')
 
@@ -123,6 +124,7 @@ def data_entry_dashboard(request):
         'form': form,
         'entries': entries
     })
+
 
 
 #  إنشاء فاتورة
@@ -151,7 +153,7 @@ def create_invoice(request):
                     total = 0
                     for item in items:
                         item.invoice = invoice
-                        item.save()  # total_price يُحسب في model
+                        item.save() 
                         total += item.total_price
 
                     invoice.total_amount = total
@@ -204,20 +206,25 @@ def invoice_detail(request, invoice_id):
 def approve_invoice(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
 
-    if not invoice.is_approved:
-        FinancialEntry.objects.create(
-            entry_type='income' if invoice.invoice_type == 'sale' else 'expense',
-            amount=invoice.total_amount,
-            account_name='فواتير',
-            description=f"قيد تلقائي للفاتورة {invoice.invoice_number}",
-            invoice=invoice,
-            created_by=request.user,
-            status='معتمد'
-        )
-        invoice.is_approved = True
-        invoice.save()
+    if invoice.is_approved:
+        return redirect('invoice_detail', invoice.id)
 
-    return redirect('accountant_invoices')
+    #  إنشاء قيد في دفتر القيود
+    JournalEntry.objects.create(
+        date=invoice.invoice_date,
+        description=f"قيد فاتورة رقم {invoice.invoice_number}",
+        account_name='العملاء' if invoice.invoice_type == 'sale' else 'الموردين',
+        debit=invoice.total_amount if invoice.invoice_type == 'sale' else 0,
+        credit=invoice.total_amount if invoice.invoice_type == 'purchase' else 0,
+        invoice=invoice,
+        created_by=request.user,
+        status='approved'
+    )
+
+    invoice.is_approved = True
+    invoice.save()
+
+    return redirect('invoice_detail', invoice.id)
 
 
 #  تسجيل الخروج

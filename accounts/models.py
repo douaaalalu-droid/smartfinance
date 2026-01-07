@@ -1,6 +1,5 @@
 from django.db import models
 from django.conf import settings
-from decimal import Decimal
 from django.contrib.auth.models import AbstractUser
 
 
@@ -50,19 +49,50 @@ class InvoiceItem(models.Model):
     def save(self, *args, **kwargs):
         self.total_price = self.quantity * self.unit_price
         super().save(*args, **kwargs)
-
-class FinancialEntry(models.Model):
+class JournalEntry(models.Model):
     ENTRY_TYPES = (
         ('income', 'إيراد'),
         ('expense', 'مصروف'),
     )
 
-    entry_type = models.CharField(max_length=10, choices=ENTRY_TYPES)
-    amount = models.DecimalField(max_digits=14, decimal_places=2)
-    account_name = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
+    ENTRY_STATUS = (
+        ('draft', 'مسودة'),
+        ('approved', 'معتمد'),
+    )
 
-    invoice = models.ForeignKey(Invoice, null=True, blank=True, on_delete=models.SET_NULL)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    date = models.DateField()
+    description = models.CharField(max_length=255)
+
+    debit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    credit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    account_name = models.CharField(max_length=100)
+
+    entry_type = models.CharField(
+        max_length=10,
+        choices=ENTRY_TYPES
+    )
+
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True
+    )
+
+    invoice = models.ForeignKey(
+        Invoice,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='journal_entries'
+    )
+
+    status = models.CharField(
+        max_length=10,
+        choices=ENTRY_STATUS,
+        default='draft'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
-    status = models.CharField(max_length=20, default='بانتظار المراجعة')
