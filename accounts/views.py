@@ -6,7 +6,7 @@ from django.db import transaction
 from .models import InvoiceItem
 from django.contrib import messages
 from django.db.models import Sum
-
+from decimal import Decimal
 from .models import User, Invoice, InvoiceItem, JournalEntry
 
 from .forms import (
@@ -208,22 +208,26 @@ def approve_invoice(request, invoice_id):
 
     if invoice.is_approved:
         return redirect('invoice_detail', invoice.id)
+    amount = invoice.total_amount
 
-    #  إنشاء قيد في دفتر القيود
     JournalEntry.objects.create(
-        date=invoice.invoice_date,
-        description=f"قيد فاتورة رقم {invoice.invoice_number}",
-        account_name='العملاء' if invoice.invoice_type == 'sale' else 'الموردين',
-        debit=invoice.total_amount if invoice.invoice_type == 'sale' else 0,
-        credit=invoice.total_amount if invoice.invoice_type == 'purchase' else 0,
-        invoice=invoice,
-        created_by=request.user,
-        status='approved'
-    )
-
+            date=invoice.invoice_date,
+            description=f"قيد تلقائي للفاتورة{invoice.invoice_number}",
+            account_name=(
+                "المبيعات"if invoice.invoice_type == 'sale' else "المشتريات"
+            ),
+    debit=amount if invoice.invoice_type == 'purchase' else Decimal('0'),
+    credit=amount if invoice.invoice_type == 'sale' else Decimal('0'),
+    amount=amount,
+    entry_type=(
+        'income' if invoice.invoice_type == 'sale' else 'expense'
+    ),
+    created_by=request.user,
+    status='approved',
+    invoice=invoice 
+ )
     invoice.is_approved = True
     invoice.save()
-
     return redirect('invoice_detail', invoice.id)
 
 
