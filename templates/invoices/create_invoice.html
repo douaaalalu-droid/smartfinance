@@ -63,6 +63,7 @@
                         <th>الكمية</th>
                         <th>سعر الوحدة</th>
                         <th>الإجمالي</th>
+                        <th>حذف</th>
                         
                     </tr>
                 </thead>
@@ -155,19 +156,46 @@ document.getElementById('add-item').addEventListener('click', function () {
     const row = document.createElement('tr');
     row.classList.add('item-row');
 
-    tempDiv.querySelectorAll('input, select, textarea').forEach(input => {
-        const td = document.createElement('td');
-        td.appendChild(input);
-        row.appendChild(td);
-    });
+ // إضافة بند جديد 
+document.getElementById('add-item').addEventListener('click', function () {
+    const formIndex = parseInt(totalFormsInput.value);
+    const newFormHtml = emptyFormTemplate.replace(/__prefix__/g, formIndex);
 
-    const totalTd = document.createElement('td');
-    totalTd.innerHTML = `<input type="text" class="form-control total-field" readonly>`;
-    row.appendChild(totalTd);
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = newFormHtml;
 
-    const deleteTd = document.createElement('td');
-    deleteTd.innerHTML = `<button type="button" class="btn btn-danger btn-sm remove-row">🗑</button>`;
-    row.appendChild(deleteTd);
+    const row = document.createElement('tr');
+    row.classList.add('item-row');
+
+    // الوصف
+    let td = document.createElement('td');
+    td.appendChild(tempDiv.querySelector('[name$="description"]'));
+    row.appendChild(td);
+
+    // الكمية
+    td = document.createElement('td');
+    td.appendChild(tempDiv.querySelector('[name$="quantity"]'));
+    row.appendChild(td);
+
+    // سعر الوحدة
+    td = document.createElement('td');
+    td.appendChild(tempDiv.querySelector('[name$="unit_price"]'));
+    row.appendChild(td);
+
+    // الإجمالي
+    td = document.createElement('td');
+    td.innerHTML = `<input type="text" class="form-control total-field" readonly>`;
+    row.appendChild(td);
+
+    // حذف
+    td = document.createElement('td');
+    td.innerHTML = `<button type="button" class="btn btn-danger btn-sm remove-row">🗑</button>`;
+    row.appendChild(td);
+
+    itemsContainer.appendChild(row);
+    totalFormsInput.value = formIndex + 1;
+});
+
 
     itemsContainer.appendChild(row);
     totalFormsInput.value = formIndex + 1;

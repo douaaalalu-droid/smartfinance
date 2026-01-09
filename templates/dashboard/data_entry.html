@@ -19,7 +19,7 @@
             {% csrf_token %}
 
             <div class="row mb-3">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label>التاريخ</label>
                     {{ form.date }}
                 </div>
@@ -28,26 +28,24 @@
                     <label>اسم الحساب</label>
                     {{ form.account_name }}
                 </div>
+                <div class="col-md-4">
+                    <label>الوصف</label>
+                    {{form.description}}
+                </div>
+                <div class="col-mb-4">
+                    <label>المبلغ</label>
+                    {{form.amount}}
+                </div>
             </div>
 
-    <div class="mb-3">
+     <div class="md-2">           
         <label>نوع القيد</label><br>
         {{ form.entry_side }}
     </div>
 
-    <div class="mb-3">
-        <label>المبلغ</label>
-        {{ form.amount }}
-    </div>
-
-    <div class="mb-3">
-        <label>الوصف</label>
-        {{ form.description }}
-    </div>
-
     <button class="btn btn-success">💾 حفظ القيد</button>
-</form>
-        </form>
+           </form>
+
     </div>
 </div>
 
