@@ -14,38 +14,50 @@
         بيانات القيد المحاسبي
     </div>
 
-    <div class="card-body">
+    
         <form method="post">
             {% csrf_token %}
 
             <div class="row mb-3">
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label>التاريخ</label>
                     {{ form.date }}
                 </div>
 
-                <div class="col-md-4">
-                    <label>اسم الحساب</label>
-                    {{ form.account_name }}
-                </div>
-                <div class="col-md-4">
+                <div class="col-md-8">
                     <label>الوصف</label>
                     {{form.description}}
                 </div>
-                <div class="col-mb-4">
-                    <label>المبلغ</label>
-                    {{form.amount}}
-                </div>
             </div>
 
-     <div class="md-2">           
-        <label>نوع القيد</label><br>
-        {{ form.entry_side }}
-    </div>
+            {{formset.management_form}}
+    <table class="table table-bordered text-center">
+        <thead>
+            <tr>
+                <th>الحساب</th>
+                <th>مدين</th>
+                <th>دائن</th>
+                <th>حذف</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in formset %}
+            <tr>
+                <td>{{ line.account_name }}</td>
+                <td>{{ line.debit }}</td>
+                <td>{{ line.credit }}</td>
+                <td>{{line.Delet}}</td>
+                
+        
+                
+            </tr>
+          {%endfor%}
+        </tbody>
+    </table>
 
-    <button class="btn btn-success">💾 حفظ القيد</button>
-           </form>
-
+    <button class="btn btn-success mt-3">💾 حفظ القيد</button>
+</form>
+    
     </div>
 </div>
 

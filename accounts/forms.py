@@ -1,6 +1,9 @@
 from django import forms
 from django.forms import inlineformset_factory
-from .models import Invoice, InvoiceItem, JournalEntry
+from .models import Invoice, InvoiceItem, JournalEntry, JournalEntryLine
+
+
+
 
 
 class InvoiceForm(forms.ModelForm):
@@ -44,9 +47,6 @@ InvoiceItemFormSet = inlineformset_factory(
     can_delete=False
 )
 
-from django import forms
-from django.forms import inlineformset_factory
-from .models import Invoice, InvoiceItem, JournalEntry
 
 
 class InvoiceForm(forms.ModelForm):
@@ -90,25 +90,8 @@ InvoiceItemFormSet = inlineformset_factory(
     can_delete=False
 )
 
+
 class JournalEntryForm(forms.ModelForm):
-
-    ENTRY_SIDE = (
-        ('debit', 'مدين'),
-        ('credit', 'دائن'),
-    )
-
-    entry_side = forms.ChoiceField(
-        choices=ENTRY_SIDE,
-        widget=forms.RadioSelect,
-        label='نوع القيد'
-    )
-
-    amount = forms.DecimalField(
-        label="المبلغ",
-        min_value=0,
-        decimal_places=2
-    )
-
     date = forms.DateField(
         widget=forms.DateInput(
             attrs={'type': 'date', 'class': 'form-control'},
@@ -118,34 +101,44 @@ class JournalEntryForm(forms.ModelForm):
         label="تاريخ القيد"
     )
 
+    description = forms.CharField(
+        widget=forms.Textarea(
+            attrs={
+                'class': 'form-control',
+                'rows': 2
+            }
+        ),
+        label="وصف القيد"
+    )
+
     class Meta:
         model = JournalEntry
         fields = [
             'date',
-            'account_name',
             'description',
         ]
+    
 
+class JournalEntryLineForm(forms.ModelForm):
+    class Meta:
+        model = JournalEntryLine
+        fields = [
+            'account_name',
+            'debit',
+            'credit',
+        ]
         widgets = {
             'account_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control'}),
+            'debit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'credit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }
 
-    def save(self, commit=True):
-        entry = super().save(commit=False)
 
-        side = self.cleaned_data['entry_side']
-        amount = self.cleaned_data['amount']
-
-        if side == 'debit':
-            entry.debit = amount
-            entry.credit = 0
-        else:
-            entry.credit = amount 
-            entry.debit = 0
-        entry.amount = amount
-
-        if commit:
-            entry.save()
-
-        return entry
+        
+JournalEntryLineFormSet = inlineformset_factory(
+    JournalEntry,
+    JournalEntryLine,
+    form=JournalEntryLineForm,
+    extra=2,
+    can_delete=True
+)

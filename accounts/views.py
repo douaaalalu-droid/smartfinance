@@ -8,6 +8,9 @@ from django.contrib import messages
 from django.db.models import Sum
 from decimal import Decimal
 from .models import User, Invoice, InvoiceItem, JournalEntry
+from .forms import JournalEntryForm, JournalEntryLineFormSet
+from accounts.forms import JournalEntryLine
+
 
 from .forms import (
    JournalEntryForm,
@@ -66,26 +69,7 @@ def admin_dashboard(request):
     }
     return render(request, 'dashboard/admin.html', context)
 
-#  لوحة المحاسب
-@login_required
-@role_required('accountant')
-def accountant_dashboard(request):
-    form = JournalEntryForm(request.POST or None)
 
-    if request.method == 'POST' and form.is_valid():
-        entry = form.save(commit=False)
-
-        entry.created_by = request.user
-        entry.status = 'draft'
-        entry.save()
-        return redirect('accountant_dashboard')
-
-    entries = JournalEntry.objects.all().order_by('-created_at')
-
-    return render(request, 'dashboard/accountant.html', {
-        'form': form,
-        'entries': entries
-    })
 
 
 #  لوحة المدير المالي
@@ -103,18 +87,126 @@ def manager_dashboard(request):
     }
     return render(request, 'dashboard/manager.html', context)
 
+
+#لوحة المحاسب
+@login_required
+@role_required('accountant')
+def accountant_dashboard(request):
+
+    if request.method == 'POST':
+        form = JournalEntryForm(request.POST)
+
+        if form.is_valid():
+            # 1️⃣ حفظ رأس القيد أولًا
+            entry = form.save(commit=False)
+            entry.created_by = request.user
+            entry.status = 'draft'
+            entry.save()  # ← الآن لديه ID
+
+            # 2️⃣ إنشاء formset بعد الحفظ
+            formset = JournalEntryLineFormSet(request.POST, instance=entry)
+
+            if formset.is_valid():
+                formset.save()
+
+                # 3️⃣ التحقق من توازن القيد
+                total_debit = entry.lines.aggregate(
+                    total=Sum('debit')
+                )['total'] or 0
+
+                total_credit = entry.lines.aggregate(
+                    total=Sum('credit')
+                )['total'] or 0
+
+                if total_debit != total_credit:
+                    entry.delete()
+                    messages.error(
+                        request,
+                        f"❌ القيد غير متوازن: مدين {total_debit} ≠ دائن {total_credit}"
+                    )
+                    return redirect('accountant_dashboard')
+
+                # 4️⃣ نجاح
+                messages.success(request, '✅ تم حفظ القيد المحاسبي بنجاح')
+                return redirect('accountant_dashboard')
+
+            else:
+                entry.delete()
+                messages.error(request, '❌ يوجد خطأ في أسطر القيد')
+
+        else:
+            messages.error(request, '❌ يوجد خطأ في بيانات القيد')
+
+    else:
+        form = JournalEntryForm()
+        formset = JournalEntryLineFormSet()
+
+    entries = JournalEntry.objects.filter(
+        created_by=request.user
+    ).order_by('-created_at')
+
+    return render(request, 'dashboard/accountant.html', {
+        'form': form,
+        'formset': formset,
+        'entries': entries
+    })
+
+
 # لوحة مدخل البيانات مع دفتر القيود
 @login_required
 @role_required('data_entry')
 def data_entry_dashboard(request):
-    form = JournalEntryForm(request.POST or None)
 
-    if request.method == 'POST' and form.is_valid():
-        entry = form.save(commit=False)
-        entry.created_by = request.user
-        entry.status = 'draft'
-        entry.save()
-        return redirect('data_entry_dashboard')
+    if request.method == 'POST':
+        form = JournalEntryForm(request.POST)
+
+        if form.is_valid():
+            # 1️⃣ حفظ رأس القيد
+            entry = form.save(commit=False)
+            entry.created_by = request.user
+            entry.status = 'draft'
+            entry.save()  # ← الآن لديه ID
+
+            # 2️⃣ إنشاء formset بعد الحفظ
+            formset = JournalEntryLineFormSet(request.POST, instance=entry)
+
+            if formset.is_valid():
+                formset.save()
+
+                # 3️⃣ التحقق من توازن القيد
+                total_debit = entry.lines.aggregate(
+                    total=Sum('debit')
+                )['total'] or 0
+
+                total_credit = entry.lines.aggregate(
+                    total=Sum('credit')
+                )['total'] or 0
+
+                if total_debit != total_credit:
+                    entry.delete()
+                    messages.error(
+                        request,
+                        f"❌ القيد غير متوازن: مدين {total_debit} ≠ دائن {total_credit}"
+                    )
+                    return redirect('data_entry_dashboard')
+
+                # 4️⃣ نجاح
+                messages.success(
+                    request,
+                    '✅ تم حفظ القيد وإرساله للمحاسب للمراجعة'
+                )
+                return redirect('data_entry_dashboard')
+
+            else:
+                entry.delete()
+                messages.error(request, '❌ يوجد خطأ في أسطر القيد')
+
+        else:
+            messages.error(request, '❌ يوجد خطأ في بيانات القيد')
+
+    else:
+        form = JournalEntryForm()
+        formset = JournalEntryLineFormSet()
 
     entries = JournalEntry.objects.filter(
         created_by=request.user
@@ -122,6 +214,7 @@ def data_entry_dashboard(request):
 
     return render(request, 'dashboard/data_entry.html', {
         'form': form,
+        'formset': formset,
         'entries': entries
     })
 
@@ -208,28 +301,45 @@ def approve_invoice(request, invoice_id):
 
     if invoice.is_approved:
         return redirect('invoice_detail', invoice.id)
+
     amount = invoice.total_amount
 
-    JournalEntry.objects.create(
-            date=invoice.invoice_date,
-            description=f"قيد تلقائي للفاتورة{invoice.invoice_number}",
-            account_name=(
-                "المبيعات"if invoice.invoice_type == 'sale' else "المشتريات"
-            ),
-    debit=amount if invoice.invoice_type == 'purchase' else Decimal('0'),
-    credit=amount if invoice.invoice_type == 'sale' else Decimal('0'),
-    amount=amount,
-    entry_type=(
-        'income' if invoice.invoice_type == 'sale' else 'expense'
-    ),
-    created_by=request.user,
-    status='approved',
-    invoice=invoice 
- )
-    invoice.is_approved = True
-    invoice.save()
-    return redirect('invoice_detail', invoice.id)
+    with transaction.atomic():
 
+        # 1️⃣ إنشاء رأس القيد
+        entry = JournalEntry.objects.create(
+            date=invoice.invoice_date,
+            description=f"قيد تلقائي للفاتورة {invoice.invoice_number}",
+            created_by=request.user,
+            status='approved',
+            invoice=invoice
+        )
+
+        # 2️⃣ سطر مدين
+        JournalEntryLine.objects.create(
+            journal_entry=entry,
+            account_name="المشتريات" if invoice.invoice_type == 'purchase' else "العملاء",
+            debit=amount if invoice.invoice_type == 'purchase' else Decimal('0'),
+            credit=Decimal('0')
+        )
+
+        # 3️⃣ سطر دائن
+        JournalEntryLine.objects.create(
+            journal_entry=entry,
+            account_name="المبيعات" if invoice.invoice_type == 'sale' else "الصندوق",
+            debit=Decimal('0'),
+            credit=amount if invoice.invoice_type == 'sale' else Decimal('0')
+        )
+
+        # 4️⃣ التحقق من التوازن
+        entry.full_clean()
+
+        # 5️⃣ اعتماد الفاتورة
+        invoice.is_approved = True
+        invoice.save()
+
+    messages.success(request, "✅ تم اعتماد الفاتورة وإنشاء القيد المحاسبي تلقائيًا")
+    return redirect('invoice_detail', invoice.id)
 
 #  تسجيل الخروج
 @login_required

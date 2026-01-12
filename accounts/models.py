@@ -1,6 +1,8 @@
 from django.db import models
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
+from django.db.models import Sum
 
 
 class User(AbstractUser):
@@ -49,37 +51,23 @@ class InvoiceItem(models.Model):
     def save(self, *args, **kwargs):
         self.total_price = self.quantity * self.unit_price
         super().save(*args, **kwargs)
+
+
+
 class JournalEntry(models.Model):
-    ENTRY_TYPES = (
-        ('income', 'إيراد'),
-        ('expense', 'مصروف'),
-    )
-
-    ENTRY_STATUS = (
-        ('draft', 'مسودة'),
-        ('approved', 'معتمد'),
-    )
-
     date = models.DateField()
     description = models.CharField(max_length=255)
-
-    debit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    credit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-
-    account_name = models.CharField(max_length=100)
-
-    entry_type = models.CharField(
+    status = models.CharField(
         max_length=10,
-        choices=ENTRY_TYPES
+        choices=(('draft', 'مسودة'), ('approved', 'معتمد')),
+        default='draft'
     )
-
-    amount = models.DecimalField(max_digits=14, decimal_places=2)
-
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True
     )
+
 
     invoice = models.ForeignKey(
         Invoice,
@@ -88,11 +76,39 @@ class JournalEntry(models.Model):
         blank=True,
         related_name='journal_entries'
     )
+    created_at = models.DateTimeField(auto_now_add=True)
 
-    status = models.CharField(
-        max_length=10,
-        choices=ENTRY_STATUS,
-        default='draft'
+    def __str__(self):
+        return f"قيد بتاريخ {self.date}"   
+        
+
+    
+
+    
+
+
+
+class JournalEntryLine(models.Model):
+    journal_entry = models.ForeignKey(
+        JournalEntry,
+        related_name='lines',
+        on_delete=models.CASCADE
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    account_name = models.CharField(max_length=100)
+
+    debit = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0
+    )
+
+    credit = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=0
+    )
+
+    def __str__(self):
+        return self.account_name
+
