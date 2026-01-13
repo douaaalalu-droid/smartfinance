@@ -123,14 +123,14 @@ class JournalEntryLineForm(forms.ModelForm):
     class Meta:
         model = JournalEntryLine
         fields = [
-            'account_name',
+            'account',
             'debit',
             'credit',
         ]
         widgets = {
-            'account_name': forms.TextInput(attrs={'class': 'form-control'}),
-            'debit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'credit': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'account': forms.Select(attrs={'class': 'form-control'}),
+            'debit': forms.NumberInput(attrs={'class': 'form-control'}),
+            'credit': forms.NumberInput(attrs={'class': 'form-control'}),
         }
 
 

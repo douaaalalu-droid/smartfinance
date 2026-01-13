@@ -97,19 +97,18 @@ def accountant_dashboard(request):
         form = JournalEntryForm(request.POST)
 
         if form.is_valid():
-            # 1️⃣ حفظ رأس القيد أولًا
+            #  حفظ رأس القيد 
             entry = form.save(commit=False)
             entry.created_by = request.user
             entry.status = 'draft'
-            entry.save()  # ← الآن لديه ID
+            entry.save()
 
-            # 2️⃣ إنشاء formset بعد الحفظ
             formset = JournalEntryLineFormSet(request.POST, instance=entry)
 
             if formset.is_valid():
                 formset.save()
 
-                # 3️⃣ التحقق من توازن القيد
+                #  التحقق من توازن القيد
                 total_debit = entry.lines.aggregate(
                     total=Sum('debit')
                 )['total'] or 0
@@ -126,7 +125,7 @@ def accountant_dashboard(request):
                     )
                     return redirect('accountant_dashboard')
 
-                # 4️⃣ نجاح
+                #  نجاح حفظ القيد 
                 messages.success(request, '✅ تم حفظ القيد المحاسبي بنجاح')
                 return redirect('accountant_dashboard')
 
@@ -140,10 +139,13 @@ def accountant_dashboard(request):
     else:
         form = JournalEntryForm()
         formset = JournalEntryLineFormSet()
+    entries = (
+    JournalEntry.objects
+    .select_related('created_by')
+    .prefetch_related('lines')
+    .order_by('-created_at')
+)
 
-    entries = JournalEntry.objects.filter(
-        created_by=request.user
-    ).order_by('-created_at')
 
     return render(request, 'dashboard/accountant.html', {
         'form': form,
@@ -152,7 +154,7 @@ def accountant_dashboard(request):
     })
 
 
-# لوحة مدخل البيانات مع دفتر القيود
+# لوحة مدخل البيانات 
 @login_required
 @role_required('data_entry')
 def data_entry_dashboard(request):
@@ -161,19 +163,18 @@ def data_entry_dashboard(request):
         form = JournalEntryForm(request.POST)
 
         if form.is_valid():
-            # 1️⃣ حفظ رأس القيد
+         
             entry = form.save(commit=False)
             entry.created_by = request.user
             entry.status = 'draft'
-            entry.save()  # ← الآن لديه ID
+            entry.save() 
 
-            # 2️⃣ إنشاء formset بعد الحفظ
             formset = JournalEntryLineFormSet(request.POST, instance=entry)
 
             if formset.is_valid():
                 formset.save()
 
-                # 3️⃣ التحقق من توازن القيد
+        
                 total_debit = entry.lines.aggregate(
                     total=Sum('debit')
                 )['total'] or 0
@@ -190,7 +191,7 @@ def data_entry_dashboard(request):
                     )
                     return redirect('data_entry_dashboard')
 
-                # 4️⃣ نجاح
+              
                 messages.success(
                     request,
                     '✅ تم حفظ القيد وإرساله للمحاسب للمراجعة'
@@ -208,9 +209,13 @@ def data_entry_dashboard(request):
         form = JournalEntryForm()
         formset = JournalEntryLineFormSet()
 
-    entries = JournalEntry.objects.filter(
-        created_by=request.user
-    ).order_by('-created_at')
+    entries = (
+    JournalEntry.objects
+    .select_related('created_by')
+    .prefetch_related('lines')
+    .order_by('-created_at')
+)
+
 
     return render(request, 'dashboard/data_entry.html', {
         'form': form,

@@ -45,16 +45,12 @@
         <tbody>
 
          {% for line in formset%}
-        <tr>
-                <td>{{ line.account_name }}</td>
-                <td>{{ line.debit }}</td>
-                <td>{{ line.credit }}</td>
-                <td>
-                    {% if line.instance.pk %}
-                        {{ line.DELETE }}
-                    {% endif %}
-                </td>
-            </tr>
+       <tr>
+    <td>{{ line.account }}</td>
+    <td>{{ line.debit }}</td>
+    <td>{{ line.credit }}</td>
+    <td>{{ line.DELETE }}</td>
+       </tr>
           {%endfor%}
         </tbody>
     </table>
@@ -73,7 +69,7 @@
 
     <div class="card-body">
         <table class="table table-bordered text-center">
-            <thead class="table-secondary">
+            <thead>
                 <tr>
                     <th>التاريخ</th>
                     <th>الحساب</th>
@@ -85,12 +81,14 @@
             </thead>
             <tbody>
                 {% for entry in entries %}
+                   {% for line in entry.lines.all %}
                 <tr>
                     <td>{{ entry.date }}</td>
-                    <td>{{ entry.account_name }}</td>
-                    <td>{{ entry.debit }}</td>
-                    <td>{{ entry.credit }}</td>
-                    <td>{{ entry.created_by.username }}</td>
+                    <td>{{ line.account }}</td>
+                    <td>{{ line.debit }}</td>
+                    <td>{{ line.credit }}</td>
+                    <td>{{ entry.created_by.get_full_name|default:entry.created_by.username }}</td>
+
                     <td>
                         {% if entry.status == 'approved' %}
                             ✅ معتمد
@@ -99,7 +97,8 @@
                         {% endif %}
                     </td>
                 </tr>
-                {% empty %}
+                   {%endfor%}
+              {% empty %}
                 <tr>
                     <td colspan="6">لا توجد قيود</td>
                 </tr>

@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from .models import User, Invoice, InvoiceItem, JournalEntry, JournalEntryLine
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
+from .models import Account
 
 
 
@@ -87,10 +88,26 @@ class JournalEntryAdmin(admin.ModelAdmin):
 class JournalEntryLineAdmin(admin.ModelAdmin):
     list_display = (
         'journal_entry', 
-        'account_name',
+        'account',
         'debit',
         'credit',
     )
-    list_filter = ('account_name',)
+    list_filter = ('account',)
+
+
+@admin.register(Account)
+class AccountAdmin(admin.ModelAdmin):
+    list_display = (
+        'code',
+        'name',
+        'account_type',
+        'parent',
+    
+    )
+    list_filter = (
+        'account_type',
+        )
+    search_fields = ('code', 'name')
+
 
 

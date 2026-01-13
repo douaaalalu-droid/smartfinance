@@ -42,15 +42,12 @@
         </thead>
         <tbody>
             {% for line in formset %}
-            <tr>
-                <td>{{ line.account_name }}</td>
-                <td>{{ line.debit }}</td>
-                <td>{{ line.credit }}</td>
-                <td>{{line.Delet}}</td>
-                
-        
-                
-            </tr>
+           <tr>
+    <td>{{ line.account }}</td>
+    <td>{{ line.debit }}</td>
+    <td>{{ line.credit }}</td>
+    <td> {{ line.DELETE }} </td>
+</tr>
           {%endfor%}
         </tbody>
     </table>
@@ -67,38 +64,42 @@
     </div>
 
     <div class="card-body">
-        <table class="table table-bordered text-center">
-            <thead class="table-secondary">
-                <tr>
-                    <th>التاريخ</th>
-                    <th>الحساب</th>
-                    <th>مدين</th>
-                    <th>دائن</th>
-                    <th>الحالة</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for entry in entries %}
-                <tr>
-                    <td>{{ entry.date }}</td>
-                    <td>{{ entry.account_name }}</td>
-                    <td>{{ entry.debit }}</td>
-                    <td>{{ entry.credit }}</td>
-                    <td>
-                        {% if entry.status == 'draft' %}
-                            🕒 مسودة
-                        {% else %}
-                            ✅ معتمد
-                        {% endif %}
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5">لا توجد قيود</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    <table class="table table-bordered text-center">
+    <thead>
+        <tr>
+            <th>التاريخ</th>
+            <th>الحساب</th>
+            <th>مدين</th>
+            <th>دائن</th>
+            <th>الحالة</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry in entries %}
+            {% for line in entry.lines.all %}
+            <tr>
+                <td>{{ entry.date }}</td>
+                <td>{{ line.account}}</td>
+                <td>{{ line.debit }}</td>
+                <td>{{ line.credit }}</td>
+               
+                <td>
+                    {% if entry.status == 'draft' %}
+                        مسودة ⏳
+                    {% else %}
+                        معتمد ✅
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        {% empty %}
+        <tr>
+            <td colspan="6">لا توجد قيود</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
     </div>
 </div>
 

@@ -4,7 +4,6 @@ from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 
-
 class User(AbstractUser):
     ROLE_CHOICES = (
         ('admin', 'مدير النظام'),
@@ -54,6 +53,38 @@ class InvoiceItem(models.Model):
 
 
 
+class Account(models.Model):
+    ACCOUNT_TYPES = (
+        ('asset', 'أصل'),
+        ('liability', 'التزام'),
+        ('equity', 'حقوق ملكية'),
+        ('income', 'إيراد'),
+        ('expense', 'مصروف'),
+    )
+
+    code = models.CharField(max_length=20, unique=True, verbose_name='رمز الحساب')
+    name = models.CharField(max_length=100, verbose_name='اسم الحساب')
+    account_type = models.CharField(
+        max_length=20,
+        choices=ACCOUNT_TYPES,
+        verbose_name='نوع الحساب'
+    )
+
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='children',
+        verbose_name='الحساب الأب'
+    )
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+
+
+
 class JournalEntry(models.Model):
     date = models.DateField()
     description = models.CharField(max_length=255)
@@ -82,33 +113,39 @@ class JournalEntry(models.Model):
         return f"قيد بتاريخ {self.date}"   
         
 
-    
-
-    
-
 
 
 class JournalEntryLine(models.Model):
     journal_entry = models.ForeignKey(
         JournalEntry,
+        on_delete=models.CASCADE,
         related_name='lines',
-        on_delete=models.CASCADE
+        verbose_name='القيد'
     )
 
-    account_name = models.CharField(max_length=100)
+    account = models.ForeignKey(
+        Account,
+        on_delete=models.PROTECT,
+        verbose_name="الحساب"
+    
+    )
 
     debit = models.DecimalField(
-        max_digits=14,
+        max_digits=12,
         decimal_places=2,
-        default=0
+        default=0,
+        verbose_name='مدين'
     )
 
     credit = models.DecimalField(
-        max_digits=14,
+        max_digits=12,
         decimal_places=2,
-        default=0
+        default=0,
+        verbose_name='دائن'
     )
 
     def __str__(self):
-        return self.account_name
+        return f"{self.account} | مدين: {self.debit} | دائن: {self.credit}"
+  
 
+  
