@@ -55,11 +55,11 @@ class InvoiceItem(models.Model):
 
 class Account(models.Model):
     ACCOUNT_TYPES = (
-        ('asset', 'أصل'),
-        ('liability', 'التزام'),
+        ('asset', 'أصول'),
+        ('liability', 'خصوم'),
         ('equity', 'حقوق ملكية'),
-        ('income', 'إيراد'),
-        ('expense', 'مصروف'),
+        ('revenue', 'إيرادات'),
+        ('expense', 'مصروفات'),
     )
 
     code = models.CharField(max_length=20, unique=True, verbose_name='رمز الحساب')
@@ -78,6 +78,11 @@ class Account(models.Model):
         related_name='children',
         verbose_name='الحساب الأب'
     )
+    class Meta:
+        permissions = [
+            ("access_general_ledger", "الدخول إلى دفتر الأستاذ"),
+              ("view_trial_balance", "Can view trial balance"),
+        ]
 
     def __str__(self):
         return f"{self.code} - {self.name}"
@@ -85,12 +90,31 @@ class Account(models.Model):
 
 
 
+
 class JournalEntry(models.Model):
     date = models.DateField()
     description = models.CharField(max_length=255)
+
+
+    ENTRY_TYPES = (
+        ('manual', 'قيد يدوي'),
+        ('invoice', 'فاتورة'),
+        ('adjustment', 'قيد تسوية'),
+        ('opening', 'قيد افتتاحي'),
+    )
+
+    entry_type = models.CharField(
+        max_length=20,
+        choices=ENTRY_TYPES,
+        default='manual'
+    )
+
+
     status = models.CharField(
         max_length=10,
-        choices=(('draft', 'مسودة'), ('approved', 'معتمد')),
+        choices=(('draft', 'مسودة'),
+                ('approved', 'معتمد')
+                ),
         default='draft'
     )
     created_by = models.ForeignKey(
@@ -108,6 +132,13 @@ class JournalEntry(models.Model):
         related_name='journal_entries'
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        permissions = [
+            ("view_trial_balance", "يمكنه عرض ميزان المراجعة"),
+        ]
+
+
+
 
     def __str__(self):
         return f"قيد بتاريخ {self.date}"   
@@ -143,6 +174,11 @@ class JournalEntryLine(models.Model):
         default=0,
         verbose_name='دائن'
     )
+    
+    class Meta:
+        permissions = [
+            ("view_general_ledger", "Can view general ledger"),
+        ]
 
     def __str__(self):
         return f"{self.account} | مدين: {self.debit} | دائن: {self.credit}"

@@ -1,0 +1,44 @@
+{% extends 'dashboard/base.html' %}
+{% block content %}
+<h class="mb-4">دفتر الأستاذ العام</h3>
+
+<form method="get">
+    <label>اختر الحساب:</label>
+    <select name="account" onchange="this.form.submit()">
+        <option value="">-- اختر الحساب --</option>
+        {% for acc in accounts %}
+            <option value="{{ acc.id }}"
+                {% if selected_account and acc.id == selected_account.id %}selected{% endif %}>
+                {{ acc.code }} - {{ acc.name }}
+            </option>
+        {% endfor %}
+    </select>
+</form>
+
+{% if selected_account %}
+<hr>
+<h4>حركة الحساب: {{ selected_account.name }}</h4>
+
+<table border="1" cellpadding="5">
+    <tr>
+        <th>التاريخ</th>
+        <th>الوصف</th>
+        <th>مدين</th>
+        <th>دائن</th>
+        <th>الرصيد</th>
+    </tr>
+
+    {% for line in lines %}
+    <tr>
+        <td>{{ line.journal_entry.date }}</td>
+        <td>{{ line.journal_entry.description }}</td>
+        <td>{{ line.debit }}</td>
+        <td>{{ line.credit }}</td>
+        <td>{{ line.running_balance }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endif %}
+
+
+{% endblock %}

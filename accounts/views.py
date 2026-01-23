@@ -10,6 +10,11 @@ from decimal import Decimal
 from .models import User, Invoice, InvoiceItem, JournalEntry
 from .forms import JournalEntryForm, JournalEntryLineFormSet
 from accounts.forms import JournalEntryLine
+from .models import Account
+from django.contrib.auth.decorators import permission_required
+from accounts.decorators import role_required
+
+
 
 
 from .forms import (
@@ -74,19 +79,39 @@ def admin_dashboard(request):
 
 #  لوحة المدير المالي
 
+
 @login_required
 @role_required('manager')
 def manager_dashboard(request):
-    income = JournalEntry.objects.filter(entry_type='income').aggregate(total=Sum('amount'))['total'] or 0
-    expense = JournalEntry.objects.filter(entry_type='expense').aggregate(total=Sum('amount'))['total'] or 0
+
+    income = (
+        JournalEntryLine.objects
+        .filter(
+            account__account_type='revenue',
+            journal_entry__status='approved'
+        )
+        .aggregate(total=Sum('credit'))['total'] or 0
+    )
+
+    expense = (
+        JournalEntryLine.objects
+        .filter(
+            account__account_type='expense',
+            journal_entry__status='approved'
+        )
+        .aggregate(total=Sum('debit'))['total'] or 0
+    )
+
+
+    profit = income - expense
 
     context = {
         'income': income,
         'expense': expense,
-        'profit': income - expense
+        'profit': profit,
     }
-    return render(request, 'dashboard/manager.html', context)
 
+    return render(request, 'dashboard/manager.html', context)
 
 #لوحة المحاسب
 @login_required
@@ -320,31 +345,113 @@ def approve_invoice(request, invoice_id):
             invoice=invoice
         )
 
-        # 2️⃣ سطر مدين
+        # 2️⃣ جلب الحسابات (بدون أكواد ثابتة)
+        if invoice.invoice_type == 'sale':
+            debit_account = Account.objects.filter(account_type='asset').first()
+            credit_account = Account.objects.filter(account_type='revenue').first()
+        else:
+            debit_account = Account.objects.filter(account_type='expense').first()
+            credit_account = Account.objects.filter(account_type='liability').first()
+
+        # 3️⃣ تأكد أن الحسابات موجودة
+        if not debit_account or not credit_account:
+            raise ValueError("الحسابات المحاسبية غير مكتملة")
+
+        # 4️⃣ سطر مدين
         JournalEntryLine.objects.create(
             journal_entry=entry,
-            account_name="المشتريات" if invoice.invoice_type == 'purchase' else "العملاء",
-            debit=amount if invoice.invoice_type == 'purchase' else Decimal('0'),
+            account=debit_account,
+            debit=amount,
             credit=Decimal('0')
         )
 
-        # 3️⃣ سطر دائن
+        # 5️⃣ سطر دائن
         JournalEntryLine.objects.create(
             journal_entry=entry,
-            account_name="المبيعات" if invoice.invoice_type == 'sale' else "الصندوق",
+            account=credit_account,
             debit=Decimal('0'),
-            credit=amount if invoice.invoice_type == 'sale' else Decimal('0')
+            credit=amount
         )
 
-        # 4️⃣ التحقق من التوازن
-        entry.full_clean()
-
-        # 5️⃣ اعتماد الفاتورة
+        # 6️⃣ اعتماد الفاتورة
         invoice.is_approved = True
         invoice.save()
 
-    messages.success(request, "✅ تم اعتماد الفاتورة وإنشاء القيد المحاسبي تلقائيًا")
+    messages.success(request, "✅ تم اعتماد الفاتورة وإنشاء القيد المحاسبي بنجاح")
     return redirect('invoice_detail', invoice.id)
+
+
+
+
+#دفتر الأستاذ
+@login_required
+@permission_required('accounts.access_general_ledger', raise_exception=True)
+def general_ledger(request):
+    account_id = request.GET.get('account')
+
+    account = None
+    lines = []
+    running_balance = 0
+
+    if account_id:
+        account = Account.objects.get(id=account_id)
+
+        lines = (
+            JournalEntryLine.objects
+            .filter(account=account)
+            .select_related('journal_entry')
+            .order_by('journal_entry__date', 'id')
+        )
+
+        for line in lines:
+            running_balance += line.debit - line.credit
+            line.running_balance = running_balance
+
+    accounts = Account.objects.all()
+
+    return render(request, 'accounts/general_ledger.html', {
+        'accounts': accounts,
+        'selected_account': account,
+        'lines': lines,
+    })
+
+
+#ميزان المراجعة
+
+@login_required
+@permission_required('accounts.view_trial_balance', raise_exception=True)
+def trial_balance(request):
+    rows = []
+    total_debit = 0
+    total_credit = 0
+
+    accounts = Account.objects.all()
+
+    for account in accounts:
+        debit = account.journalentryline_set.aggregate(
+            total=Sum('debit')
+        )['total'] or 0
+
+        credit = account.journalentryline_set.aggregate(
+            total=Sum('credit')
+        )['total'] or 0
+
+        if debit != 0 or credit != 0:
+            rows.append({
+                'account': account,
+                'debit': debit,
+                'credit': credit
+            })
+            total_debit += debit
+            total_credit += credit
+
+    context = {
+        'rows': rows,
+        'total_debit': total_debit,
+        'total_credit': total_credit,
+    }
+
+    return render(request, 'accounts/trial_balance.html', context)
 
 #  تسجيل الخروج
 @login_required

@@ -1,0 +1,88 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}ميزان المراجعة{% endblock %}
+
+{% block content %}
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">📊 ميزان المراجعة</h5>
+        <span class="badge bg-secondary">Trial Balance</span>
+    </div>
+
+    <div class="card-body">
+
+        <!-- معلومات عامة -->
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <strong>تاريخ التقرير:</strong>
+                {{ now|date:"Y-m-d" }}
+            </div>
+            <div class="col-md-6 text-end">
+                <strong>المستخدم:</strong>
+                {{ request.user.username }}
+            </div>
+        </div>
+
+        <!-- جدول ميزان المراجعة -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle text-center">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width: 50%">اسم الحساب</th>
+                        <th style="width: 25%">مدين</th>
+                        <th style="width: 25%">دائن</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td class="text-start">
+                            {{ row.account.name }}
+                        </td>
+                        <td class="text-end">
+                            {{ row.debit|floatformat:2 }}
+                        </td>
+                        <td class="text-end">
+                            {{ row.credit|floatformat:2 }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-muted">
+                            لا توجد بيانات لعرضها
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+
+                <tfoot class="table-secondary fw-bold">
+                    <tr>
+                        <td class="text-center">الإجمالي</td>
+                        <td class="text-end">
+                            {{ total_debit|floatformat:2 }}
+                        </td>
+                        <td class="text-end">
+                            {{ total_credit|floatformat:2 }}
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- تنبيه التوازن -->
+        {% if total_debit != total_credit %}
+        <div class="alert alert-danger mt-3">
+            ⚠️ الميزان غير متوازن! يرجى مراجعة القيود.
+        </div>
+        {% else %}
+        <div class="alert alert-success mt-3">
+            ✔️ ميزان المراجعة متوازن.
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+{% endblock %}
