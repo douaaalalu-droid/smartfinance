@@ -5,6 +5,20 @@
 <a href="{% url 'accountant_invoices' %}" class="btn btn-dark mb-3">
 📄 مراجعة الفواتير
 </a>
+<div class="mb-3">
+    <a href="{% url 'accountant_invoices' %}" class="btn btn-secondary">
+        📄 جميع الفواتير
+    </a>
+
+    <a href="{% url 'accountant_invoices' %}?status=approved" class="btn btn-success">
+        ✅ الفواتير المعتمدة
+    </a>
+
+    <a href="{% url 'accountant_invoices' %}?status=pending" class="btn btn-warning">
+        🕒 فواتير غير معتمدة
+    </a>
+</div>
+
 
 <h3 class="mb-4">لوحة المحاسب</h3>
 <hr>
@@ -31,6 +45,18 @@
                     {{form.description}}
                 </div>
             </div>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <label class="fw-bold">الفترة المحاسبية</label>
+        {{ form.period }}
+        {% if form.period.errors %}
+            <div class="text-danger small mt-1">
+                {{ form.period.errors }}
+            </div>
+        {% endif %}
+    </div>
+</div>
             
             {{formset.management_form}}
     <table class="table table-bordered text-center">
@@ -61,11 +87,21 @@
         </form>
     </div>
 </div>
+xx
+<div class="mb-3">
+    <a href="{% url 'accountant_dashboard' %}" class="btn btn-secondary">
+        📘 جميع القيود
+    </a>
 
-<div class="card">
-    <div class="card-header bg-dark text-white">
-        جميع القيود
-    </div>
+    <a href="{% url 'accountant_dashboard' %}?status=approved" class="btn btn-success">
+        ✅ قيود معتمدة
+    </a>
+
+    <a href="{% url 'accountant_dashboard' %}?status=draft" class="btn btn-warning">
+        🕒 قيود مسودة
+    </a>
+</div>
+
 
     <div class="card-body">
         <table class="table table-bordered text-center">
@@ -89,13 +125,19 @@
                     <td>{{ line.credit }}</td>
                     <td>{{ entry.created_by.get_full_name|default:entry.created_by.username }}</td>
 
-                    <td>
-                        {% if entry.status == 'approved' %}
-                            ✅ معتمد
-                        {% else %}
-                            🕒 مسودة
-                        {% endif %}
-                    </td>
+<td>
+    {% if entry.status == 'approved' %}
+        ✅ معتمد
+    {% else %}
+        🕒 مسودة
+        <br>
+        <a href="{% url 'approve_journal_entry' entry.id %}"
+           class="btn btn-sm btn-success mt-1">
+           اعتماد
+        </a>
+    {% endif %}
+</td>
+
                 </tr>
                    {%endfor%}
               {% empty %}

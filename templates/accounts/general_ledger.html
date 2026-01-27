@@ -1,44 +1,102 @@
 {% extends 'dashboard/base.html' %}
-{% block content %}
-<h class="mb-4">دفتر الأستاذ العام</h3>
 
-<form method="get">
-    <label>اختر الحساب:</label>
-    <select name="account" onchange="this.form.submit()">
-        <option value="">-- اختر الحساب --</option>
-        {% for acc in accounts %}
-            <option value="{{ acc.id }}"
-                {% if selected_account and acc.id == selected_account.id %}selected{% endif %}>
-                {{ acc.code }} - {{ acc.name }}
-            </option>
-        {% endfor %}
-    </select>
-</form>
+{% block content %}
+
+<div class="card mb-4 shadow-sm">
+   <div class="card-header text-dark text-center" style="background-color: #cbdeec;">
+        <h4 class="mb-1 fw-bold">
+            📘 دفتر الأستاذ العام
+        </h4>
+        <span class="badge text-white" style="background: linear-gradient(90deg, #1a2742, #a6bbe9); font-size: 0.9rem; padding: 6px 12px;">
+            General Ledger
+        </span>
+   </div>
+</div>
+
+
+
+<div class="card mb-4 shadow-sm">
+    <div class="card-body">
+        <form method="get" class="row align-items-end">
+            <div class="col-md-6">
+                <label class="form-label fw-bold">
+                    🔍 اختر الحساب
+                </label>
+                <select
+                    name="account"
+                    class="form-select"
+                    onchange="this.form.submit()"
+                >
+                    <option value="">-- اختر الحساب --</option>
+                    {% for acc in accounts %}
+                        <option value="{{ acc.id }}"
+                            {% if selected_account and acc.id == selected_account.id %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ acc.code }} - {{ acc.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
 
 {% if selected_account %}
-<hr>
-<h4>حركة الحساب: {{ selected_account.name }}</h4>
 
-<table border="1" cellpadding="5">
-    <tr>
-        <th>التاريخ</th>
-        <th>الوصف</th>
-        <th>مدين</th>
-        <th>دائن</th>
-        <th>الرصيد</th>
-    </tr>
 
-    {% for line in lines %}
-    <tr>
-        <td>{{ line.journal_entry.date }}</td>
-        <td>{{ line.journal_entry.description }}</td>
-        <td>{{ line.debit }}</td>
-        <td>{{ line.credit }}</td>
-        <td>{{ line.running_balance }}</td>
-    </tr>
-    {% endfor %}
-</table>
+<div class="card mb-3 shadow-sm">
+    <div class="card-header bg-light fw-bold">
+        📊 حركة الحساب:
+        <span class="text-primary">
+            {{ selected_account.code }} - {{ selected_account.name }}
+        </span>
+    </div>
+</div>
+
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-bordered table-striped table-hover text-center mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>التاريخ</th>
+                    <th>الوصف</th>
+                    <th>مدين</th>
+                    <th>دائن</th>
+                    <th>الرصيد</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in lines %}
+                <tr>
+                    <td>{{ line.journal_entry.date }}</td>
+                    <td class="text-start">
+                        {{ line.journal_entry.description }}
+                    </td>
+                    <td class="text-success fw-bold">
+                        {{ line.debit }}
+                    </td>
+                    <td class="text-danger fw-bold">
+                        {{ line.credit }}
+                    </td>
+                    <td class="fw-bold">
+                        {{ line.running_balance }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-muted">
+                        لا توجد حركات على هذا الحساب
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 {% endif %}
-
 
 {% endblock %}

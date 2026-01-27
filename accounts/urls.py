@@ -22,6 +22,11 @@ urlpatterns = [
 
 
     path('trial-balance/', views.trial_balance, name='trial_balance'),
+    path(
+    'journal-entry/<int:entry_id>/approve/',
+    views.approve_journal_entry,
+    name='approve_journal_entry'
+),
 
 
 ]

@@ -58,10 +58,17 @@
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header bg-dark text-white">
+<div class="mb-3">
+       <a href="{% url 'accountant_dashboard' %}" class="btn btn-secondary">
         القيود التي قمت بإدخالها
-    </div>
+       </a>
+    <a href="{% url 'accountant_dashboard' %}?status=approved" class="btn btn-success">
+        ✅ قيود معتمدة
+    </a>
+
+    <a href="{% url 'accountant_dashboard' %}?status=draft" class="btn btn-warning">
+        🕒 قيود مسودة
+    </a>
 
     <div class="card-body">
     <table class="table table-bordered text-center">
@@ -84,11 +91,16 @@
                 <td>{{ line.credit }}</td>
                
                 <td>
-                    {% if entry.status == 'draft' %}
-                        مسودة ⏳
-                    {% else %}
-                        معتمد ✅
-                    {% endif %}
+          {% if entry.status == 'approved' %}
+        ✅ معتمد
+    {% else %}
+        🕒 مسودة
+        <br>
+        <a href="{% url 'approve_journal_entry' entry.id %}"
+           class="btn btn-sm btn-success mt-1">
+           اعتماد
+        </a>
+    {% endif %}
                 </td>
             </tr>
             {% endfor %}

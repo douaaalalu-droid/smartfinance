@@ -13,6 +13,8 @@ from accounts.forms import JournalEntryLine
 from .models import Account
 from django.contrib.auth.decorators import permission_required
 from accounts.decorators import role_required
+from django.utils import timezone
+from .models import AccountingPeriod
 
 
 
@@ -120,6 +122,7 @@ def accountant_dashboard(request):
 
     if request.method == 'POST':
         form = JournalEntryForm(request.POST)
+        formset = JournalEntryLineFormSet(request.POST)
 
         if form.is_valid():
             #  حفظ رأس القيد 
@@ -164,18 +167,26 @@ def accountant_dashboard(request):
     else:
         form = JournalEntryForm()
         formset = JournalEntryLineFormSet()
-    entries = (
-    JournalEntry.objects
-    .select_related('created_by')
-    .prefetch_related('lines')
-    .order_by('-created_at')
-)
+        
+    status = request.GET.get('status')
 
+    entries = (
+        JournalEntry.objects
+        .select_related('created_by')
+        .prefetch_related('lines')
+        .order_by('-created_at')
+    )
+
+    if status == 'approved':
+        entries = entries.filter(status='approved')
+    elif status == 'draft':
+        entries = entries.filter(status='draft')
 
     return render(request, 'dashboard/accountant.html', {
         'form': form,
         'formset': formset,
-        'entries': entries
+        'entries': entries,
+        'status': status
     })
 
 
@@ -254,7 +265,6 @@ def data_entry_dashboard(request):
 @login_required
 @role_required('accountant', 'data_entry')
 def create_invoice(request):
-
     invoice_form = InvoiceForm()
     formset = InvoiceItemFormSet(queryset=InvoiceItem.objects.none())
 
@@ -262,35 +272,41 @@ def create_invoice(request):
         invoice_form = InvoiceForm(request.POST)
 
         if invoice_form.is_valid():
-            with transaction.atomic():
-                invoice = invoice_form.save(commit=False)
-                invoice.created_by = request.user
-                invoice.total_amount = 0
-                invoice.save()
-
-                formset = InvoiceItemFormSet(request.POST, instance=invoice)
-
-                if formset.is_valid():
-                    items = formset.save(commit=False)
-
-                    total = 0
-                    for item in items:
-                        item.invoice = invoice
-                        item.save() 
-                        total += item.total_price
-
-                    invoice.total_amount = total
+            invoice = invoice_form.save(commit=False)
+            if invoice.period and invoice.period.is_closed:
+                invoice_form.add_error(
+                    'period',
+                    '❌ لا يمكن إنشاء فاتورة في فترة محاسبية مقفلة'
+                )
+            else:
+                with transaction.atomic():
+                    invoice.created_by = request.user
+                    invoice.total_amount = 0
                     invoice.save()
 
-                    messages.success(request, "✅ تم حفظ الفاتورة بنجاح")
+                    formset = InvoiceItemFormSet(request.POST, instance=invoice)
 
-                    if request.user.role == 'accountant':
-                        return redirect('accountant_invoices')
+                    if formset.is_valid():
+                        items = formset.save(commit=False)
+
+                        total = 0
+                        for item in items:
+                            item.invoice = invoice
+                            item.save()
+                            total += item.total_price
+
+                        invoice.total_amount = total
+                        invoice.save(update_fields=['total_amount'])
+
+                        messages.success(request, "✅ تم حفظ الفاتورة بنجاح")
+
+                        if request.user.role == 'accountant':
+                            return redirect('accountant_invoices')
+                        else:
+                            return redirect('data_entry_dashboard')
+
                     else:
-                        return redirect('data_entry_dashboard')
-
-                else:
-                    print("Formset errors:", formset.errors)
+                        print("Formset errors:", formset.errors)
 
         else:
             print("Invoice errors:", invoice_form.errors)
@@ -300,13 +316,23 @@ def create_invoice(request):
         'formset': formset
     })
 
+
 #  قائمة الفواتير
 @login_required
 @role_required('accountant')
 def accountant_invoices(request):
+    status = request.GET.get('status')
+
     invoices = Invoice.objects.all().order_by('-created_at')
+
+    if status == 'approved':
+        invoices = invoices.filter(is_approved=True)
+    elif status == 'pending':
+        invoices = invoices.filter(is_approved=False)
+
     return render(request, 'invoices/accountant_invoices.html', {
-        'invoices': invoices
+        'invoices': invoices,
+        'status': status
     })
 
 
@@ -331,21 +357,31 @@ def approve_invoice(request, invoice_id):
 
     if invoice.is_approved:
         return redirect('invoice_detail', invoice.id)
+    if invoice.period and invoice.period.is_closed:
+        messages.error(
+            request,
+              "❌ لا يمكن اعتماد فاتورة في فترة محاسبية مقفلة"
+        )
+        return redirect('invoice_detail', invoice.id)
+
+    if invoice.is_approved:
+        return redirect('invoice_detail', invoice.id)
 
     amount = invoice.total_amount
 
     with transaction.atomic():
 
-        # 1️⃣ إنشاء رأس القيد
+        #  إنشاء رأس القيد
         entry = JournalEntry.objects.create(
             date=invoice.invoice_date,
             description=f"قيد تلقائي للفاتورة {invoice.invoice_number}",
             created_by=request.user,
             status='approved',
-            invoice=invoice
+            invoice=invoice,
+            period=invoice.period
         )
 
-        # 2️⃣ جلب الحسابات (بدون أكواد ثابتة)
+        #  جلب الحسابات
         if invoice.invoice_type == 'sale':
             debit_account = Account.objects.filter(account_type='asset').first()
             credit_account = Account.objects.filter(account_type='revenue').first()
@@ -353,11 +389,11 @@ def approve_invoice(request, invoice_id):
             debit_account = Account.objects.filter(account_type='expense').first()
             credit_account = Account.objects.filter(account_type='liability').first()
 
-        # 3️⃣ تأكد أن الحسابات موجودة
+        #  تأكد أن الحسابات موجودة
         if not debit_account or not credit_account:
             raise ValueError("الحسابات المحاسبية غير مكتملة")
 
-        # 4️⃣ سطر مدين
+        #  سطر مدين
         JournalEntryLine.objects.create(
             journal_entry=entry,
             account=debit_account,
@@ -365,7 +401,7 @@ def approve_invoice(request, invoice_id):
             credit=Decimal('0')
         )
 
-        # 5️⃣ سطر دائن
+        #  سطر دائن
         JournalEntryLine.objects.create(
             journal_entry=entry,
             account=credit_account,
@@ -373,12 +409,36 @@ def approve_invoice(request, invoice_id):
             credit=amount
         )
 
-        # 6️⃣ اعتماد الفاتورة
+        # اعتماد الفاتورة
         invoice.is_approved = True
-        invoice.save()
+        invoice.save(update_fields=['is_approved'])
 
     messages.success(request, "✅ تم اعتماد الفاتورة وإنشاء القيد المحاسبي بنجاح")
     return redirect('invoice_detail', invoice.id)
+
+@login_required
+@role_required('accountant')
+def approve_journal_entry(request, entry_id):
+    entry = get_object_or_404(JournalEntry, id=entry_id)
+
+    if entry.status == 'approved':
+        return redirect('accountant_dashboard')
+
+    # منع اعتماد قيد في فترة مقفلة
+    if entry.period and entry.period.is_closed:
+        messages.error(
+            request,
+            "❌ لا يمكن اعتماد قيد في فترة محاسبية مقفلة"
+        )
+        return redirect('accountant_dashboard')
+
+    entry.status = 'approved'
+    entry.posted = True
+    entry.save(update_fields=['status', 'posted'])
+
+    messages.success(request, "✅ تم اعتماد القيد المحاسبي بنجاح")
+    return redirect('accountant_dashboard')
+
 
 
 
@@ -452,6 +512,21 @@ def trial_balance(request):
     }
 
     return render(request, 'accounts/trial_balance.html', context)
+
+
+
+
+#الإقفال المحاسبي
+@permission_required('accounts.close_accounting_period', raise_exception=True)
+def close_accounting_period(request, period_id):
+    period = get_object_or_404(AccountingPeriod, id=period_id)
+
+    period.is_closed = True
+    period.closed_at = timezone.now()
+    period.closed_by = request.user
+    period.save()
+
+    return redirect('accounting_period_list')
 
 #  تسجيل الخروج
 @login_required

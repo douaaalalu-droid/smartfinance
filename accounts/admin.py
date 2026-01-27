@@ -4,6 +4,9 @@ from .models import User, Invoice, InvoiceItem, JournalEntry, JournalEntryLine
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from .models import Account
+from .models import AccountingPeriod
+from .services import close_accounting_period
+from django.contrib import messages
 
 
 
@@ -33,6 +36,10 @@ class InvoiceAdmin(admin.ModelAdmin):
     )
     list_filter = ('invoice_type', 'is_approved', 'created_at')
     search_fields = ('invoice_number',)
+    def save_model(self, request, obj, form, change):
+        if obj.period and obj.period.is_closed:
+            raise ValidationError("لا يمكن حفظ فاتورة في فترة محاسبية مقفلة")
+        super().save_model(request, obj, form, change)
 
 
 #  بنود الفاتورة
@@ -51,6 +58,10 @@ class InvoiceItemAdmin(admin.ModelAdmin):
 class JournalEntryLineInline(admin.TabularInline):
     model = JournalEntryLine
     extra = 2
+    def save_model(self, request, obj, form, change):
+        if obj.period and obj.period.is_closed:
+            raise ValidationError("لا يمكن حفظ فاتورة في فترة محاسبية مقفلة")
+        super().save_model(request, obj, form, change)
 
 
 #رأس القيد
@@ -82,6 +93,10 @@ class JournalEntryAdmin(admin.ModelAdmin):
             raise ValidationError(
                 f"❌ القيد غير متوازن: المدين = {total_debit} ، الدائن = {total_credit}"
             )
+    def save_model(self, request, obj, form, change):
+        if obj.period and obj.period.is_closed:
+            raise ValidationError("لا يمكن حفظ فاتورة في فترة محاسبية مقفلة")
+        super().save_model(request, obj, form, change)
 
 #اسطر القيد
 @admin.register(JournalEntryLine)
@@ -93,6 +108,10 @@ class JournalEntryLineAdmin(admin.ModelAdmin):
         'credit',
     )
     list_filter = ('account',)
+    def save_model(self, request, obj, form, change):
+        if obj.period and obj.period.is_closed:
+            raise ValidationError("لا يمكن حفظ فاتورة في فترة محاسبية مقفلة")
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(Account)
@@ -108,6 +127,26 @@ class AccountAdmin(admin.ModelAdmin):
         'account_type',
         )
     search_fields = ('code', 'name')
+
+
+    @admin.register(AccountingPeriod)
+    class AccountingPeriodAdmin(admin.ModelAdmin):
+     list_display = ("name", "start_date", "end_date", "is_closed")
+     actions = ["close_period"]
+
+    def close_period(self, request, queryset):
+        for period in queryset:
+            try:
+                close_accounting_period(period)
+                messages.success(
+                    request,
+                    f"تم إقفال الفترة {period.name}"
+                )
+            except ValidationError as e:
+                messages.error(request, str(e))
+
+    close_period.short_description = "إقفال الفترات المحددة"
+
 
 
 
