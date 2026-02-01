@@ -3,9 +3,6 @@ from django.forms import inlineformset_factory
 from .models import Invoice, InvoiceItem, JournalEntry, JournalEntryLine
 
 
-# =========================
-# Invoice Form
-# =========================
 class InvoiceForm(forms.ModelForm):
     invoice_date = forms.DateField(
         widget=forms.DateInput(
@@ -28,7 +25,7 @@ class InvoiceForm(forms.ModelForm):
             'invoice_type',
             'customer_name',
             'invoice_date',
-            'period',
+    
         ]
 
     def clean_invoice_number(self):
@@ -38,16 +35,14 @@ class InvoiceForm(forms.ModelForm):
             raise forms.ValidationError("❌ رقم الفاتورة مستخدم مسبقاً")
 
         return number
-
     def clean(self):
         cleaned_data = super().clean()
         period = cleaned_data.get('period')
 
         if period and period.is_closed:
             raise forms.ValidationError(
-                "❌ لا يمكن إنشاء فاتورة في فترة محاسبية مقفلة"
+                  '❌ هذه الفترة المحاسبية مقفلة، لا يمكن إنشاء فاتورة داخلها'   
             )
-
         return cleaned_data
 
 
@@ -60,9 +55,7 @@ InvoiceItemFormSet = inlineformset_factory(
 )
 
 
-# =========================
-# Journal Entry Form
-# =========================
+
 class JournalEntryForm(forms.ModelForm):
     date = forms.DateField(
         widget=forms.DateInput(
@@ -88,24 +81,19 @@ class JournalEntryForm(forms.ModelForm):
         fields = [
             'date',
             'description',
-            'period',
         ]
-
     def clean(self):
         cleaned_data = super().clean()
         period = cleaned_data.get('period')
 
         if period and period.is_closed:
             raise forms.ValidationError(
-                "❌ لا يمكن إنشاء قيد في فترة محاسبية مقفلة"
+                '❌ لا يمكن إدخال قيد في فترة محاسبية مقفلة'
             )
 
         return cleaned_data
 
-
-# =========================
-# Journal Entry Line
-# =========================
+  
 class JournalEntryLineForm(forms.ModelForm):
     class Meta:
         model = JournalEntryLine

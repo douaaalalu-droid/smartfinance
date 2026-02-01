@@ -15,7 +15,8 @@ from django.contrib.auth.decorators import permission_required
 from accounts.decorators import role_required
 from django.utils import timezone
 from .models import AccountingPeriod
-
+from django.core.exceptions import ValidationError
+from django.db import transaction
 
 
 
@@ -195,22 +196,34 @@ def accountant_dashboard(request):
 @role_required('data_entry')
 def data_entry_dashboard(request):
 
+    # ✅ تعريف formset بشكل افتراضي (حل الخطأ)
+    formset = JournalEntryLineFormSet()
+
     if request.method == 'POST':
         form = JournalEntryForm(request.POST)
 
         if form.is_valid():
-         
+
             entry = form.save(commit=False)
             entry.created_by = request.user
             entry.status = 'draft'
-            entry.save() 
+
+            try:
+                # ✅ التحقق الجذري من الفترة المحاسبية
+                entry.full_clean()
+                entry.save()
+            except ValidationError as e:
+                messages.error(request, e.messages[0])
+                form = JournalEntryForm()
+                formset = JournalEntryLineFormSet()
+                return redirect('data_entry_dashboard')
 
             formset = JournalEntryLineFormSet(request.POST, instance=entry)
 
             if formset.is_valid():
                 formset.save()
 
-        
+                # التحقق من توازن القيد
                 total_debit = entry.lines.aggregate(
                     total=Sum('debit')
                 )['total'] or 0
@@ -227,7 +240,6 @@ def data_entry_dashboard(request):
                     )
                     return redirect('data_entry_dashboard')
 
-              
                 messages.success(
                     request,
                     '✅ تم حفظ القيد وإرساله للمحاسب للمراجعة'
@@ -246,20 +258,18 @@ def data_entry_dashboard(request):
         formset = JournalEntryLineFormSet()
 
     entries = (
-    JournalEntry.objects
-    .select_related('created_by')
-    .prefetch_related('lines')
-    .order_by('-created_at')
-)
-
+        JournalEntry.objects
+        .filter(created_by=request.user)
+        .select_related('created_by')
+        .prefetch_related('lines')
+        .order_by('-created_at')
+    )
 
     return render(request, 'dashboard/data_entry.html', {
         'form': form,
         'formset': formset,
         'entries': entries
     })
-
-
 
 #  إنشاء فاتورة
 @login_required
@@ -273,16 +283,12 @@ def create_invoice(request):
 
         if invoice_form.is_valid():
             invoice = invoice_form.save(commit=False)
-            if invoice.period and invoice.period.is_closed:
-                invoice_form.add_error(
-                    'period',
-                    '❌ لا يمكن إنشاء فاتورة في فترة محاسبية مقفلة'
-                )
-            else:
+
+            try:
                 with transaction.atomic():
                     invoice.created_by = request.user
                     invoice.total_amount = 0
-                    invoice.save()
+                    invoice.save()  
 
                     formset = InvoiceItemFormSet(request.POST, instance=invoice)
 
@@ -306,15 +312,20 @@ def create_invoice(request):
                             return redirect('data_entry_dashboard')
 
                     else:
-                        print("Formset errors:", formset.errors)
+                        messages.error(request, "❌ يوجد خطأ في بنود الفاتورة")
+
+            except ValidationError as e:
+                # ✅ هذا هو السطر الحاسم
+                invoice_form.add_error(None, e.messages[0])
 
         else:
-            print("Invoice errors:", invoice_form.errors)
+            messages.error(request, "❌ يوجد خطأ في بيانات الفاتورة")
 
     return render(request, 'invoices/create_invoice.html', {
         'invoice_form': invoice_form,
         'formset': formset
     })
+
 
 
 #  قائمة الفواتير
@@ -363,13 +374,11 @@ def approve_invoice(request, invoice_id):
               "❌ لا يمكن اعتماد فاتورة في فترة محاسبية مقفلة"
         )
         return redirect('invoice_detail', invoice.id)
-
-    if invoice.is_approved:
-        return redirect('invoice_detail', invoice.id)
-
     amount = invoice.total_amount
 
-    with transaction.atomic():
+    try:
+
+      with transaction.atomic():
 
         #  إنشاء رأس القيد
         entry = JournalEntry.objects.create(
@@ -412,6 +421,9 @@ def approve_invoice(request, invoice_id):
         # اعتماد الفاتورة
         invoice.is_approved = True
         invoice.save(update_fields=['is_approved'])
+    except ValidationError as e:
+        messages.error(request, e.message[0])
+        return redirect('invoice_detail', invoice.id)
 
     messages.success(request, "✅ تم اعتماد الفاتورة وإنشاء القيد المحاسبي بنجاح")
     return redirect('invoice_detail', invoice.id)

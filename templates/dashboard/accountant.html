@@ -33,6 +33,12 @@
         <form method="post">
             {% csrf_token %}
 
+            {% if form.non_field_errors%}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors}}
+            </div>
+            {% endif%}
+
             <div class="row mb-3">
                 <div class="col-md-4">
                     <label>التاريخ</label>
@@ -87,7 +93,7 @@
         </form>
     </div>
 </div>
-xx
+
 <div class="mb-3">
     <a href="{% url 'accountant_dashboard' %}" class="btn btn-secondary">
         📘 جميع القيود

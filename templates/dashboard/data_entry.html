@@ -6,8 +6,6 @@
 </a>
 
 
-<h3 class="mb-4">إدخال قيد في دفتر القيود</h3>
-<hr>
 
 <div class="card mb-4">
     <div class="card-header bg-primary text-white">
@@ -17,6 +15,11 @@
     
         <form method="post">
             {% csrf_token %}
+            {% if form.non_field_errors%}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors}}
+            </div>
+            {% endif%}
 
             <div class="row mb-3">
                 <div class="col-md-4">
@@ -62,14 +65,6 @@
        <a href="{% url 'accountant_dashboard' %}" class="btn btn-secondary">
         القيود التي قمت بإدخالها
        </a>
-    <a href="{% url 'accountant_dashboard' %}?status=approved" class="btn btn-success">
-        ✅ قيود معتمدة
-    </a>
-
-    <a href="{% url 'accountant_dashboard' %}?status=draft" class="btn btn-warning">
-        🕒 قيود مسودة
-    </a>
-
     <div class="card-body">
     <table class="table table-bordered text-center">
     <thead>

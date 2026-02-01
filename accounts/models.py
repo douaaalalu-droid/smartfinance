@@ -82,12 +82,25 @@ class Invoice(models.Model):
             total += item.total_price
         return total
 
+    # ✅ هذه داخل الكلاس
     def clean(self):
-        if self.period and self.period.is_closed:
-            raise ValidationError("لا يمكن إنشاء فاتورة في فترة محاسبية مقفلة")
+        period = AccountingPeriod.objects.filter(
+            start_date__lte=self.invoice_date,
+            end_date__gte=self.invoice_date
+        ).first()
 
+        if not period:
+            raise ValidationError("❌ لا توجد فترة محاسبية لهذا التاريخ")
+
+        if period.is_closed:
+            raise ValidationError("❌ لا يمكن إنشاء فاتورة في فترة محاسبية مقفلة")
+
+        # ربط الفترة تلقائياً
+        self.period = period
+
+    # ✅ وهذه داخل الكلاس
     def save(self, *args, **kwargs):
-        self.full_clean()
+        self.full_clean()  # 🔥 هذا يستدعي clean دائماً
         super().save(*args, **kwargs)
 
 
@@ -100,20 +113,25 @@ class InvoiceItem(models.Model):
     description = models.CharField(max_length=200)
     quantity = models.PositiveIntegerField()
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
-    total_price = models.DecimalField(max_digits=14, decimal_places=2, editable=False, default=0)
+    total_price = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        editable=False,
+        default=0
+    )
 
-def save(self, *args, **kwargs):
-  
-    if self.invoice.period and self.invoice.period.is_closed:
-        raise ValidationError("لا يمكن إضافة بنود لفاتورة في فترة محاسبية مقفلة")
+    def save(self, *args, **kwargs):
+        if self.invoice.period and self.invoice.period.is_closed:
+            raise ValidationError(
+                "❌ لا يمكن إضافة بنود لفاتورة في فترة محاسبية مقفلة"
+            )
 
-    self.total_price = self.quantity * self.unit_price
-    super().save(*args, **kwargs)
+        self.total_price = self.quantity * self.unit_price
+        super().save(*args, **kwargs)
 
-    invoice = self.invoice
-    invoice.total_amount = invoice.calculate_total()
-    invoice.save(update_fields=['total_amount'])
-
+        invoice = self.invoice
+        invoice.total_amount = invoice.calculate_total()
+        invoice.save(update_fields=['total_amount'])
 
 class Account(models.Model):
     ACCOUNT_TYPES = (
@@ -207,16 +225,30 @@ class JournalEntry(models.Model):
             ("view_trial_balance", "يمكنه عرض ميزان المراجعة"),
         ]
 
-    def clean(self):
-        if self.period and self.period.is_closed:
-            raise ValidationError("لا يمكن إضافة أو تعديل قيد في فترة محاسبية مقفلة")
-
-    def save(self, *args, **kwargs):
-        self.full_clean()
-        super().save(*args, **kwargs)
-
     def __str__(self):
         return f"قيد بتاريخ {self.date}"
+
+    # ✅ التحقق الجذري
+    def clean(self):
+        period = AccountingPeriod.objects.filter(
+            start_date__lte=self.date,
+            end_date__gte=self.date
+        ).first()
+
+        if not period:
+            raise ValidationError("❌ لا توجد فترة محاسبية لهذا التاريخ")
+
+        if period.is_closed:
+            raise ValidationError("❌ لا يمكن إضافة أو تعديل قيد في فترة محاسبية مقفلة")
+
+        # ربط الفترة تلقائياً
+        self.period = period
+
+    # ✅ يمنع الحفظ من أي مكان
+    def save(self, *args, **kwargs):
+        self.full_clean()   # 🔥 يستدعي clean دائمًا
+        super().save(*args, **kwargs)
+
 
 
 class JournalEntryLine(models.Model):
