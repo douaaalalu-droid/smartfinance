@@ -73,7 +73,6 @@
             <th>الحساب</th>
             <th>مدين</th>
             <th>دائن</th>
-            <th>الحالة</th>
         </tr>
     </thead>
     <tbody>
@@ -84,19 +83,6 @@
                 <td>{{ line.account}}</td>
                 <td>{{ line.debit }}</td>
                 <td>{{ line.credit }}</td>
-               
-                <td>
-          {% if entry.status == 'approved' %}
-        ✅ معتمد
-    {% else %}
-        🕒 مسودة
-        <br>
-        <a href="{% url 'approve_journal_entry' entry.id %}"
-           class="btn btn-sm btn-success mt-1">
-           اعتماد
-        </a>
-    {% endif %}
-                </td>
             </tr>
             {% endfor %}
         {% empty %}

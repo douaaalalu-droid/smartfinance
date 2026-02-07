@@ -1,0 +1,36 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}حذف المجموعة{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">⚠️ تأكيد حذف المجموعة</h4>
+                </div>
+                <div class="card-body">
+                    <p class="lead">
+                        هل أنت متأكد من أنك تريد حذف المجموعة 
+                        <strong>{{ group.name }}</strong>؟
+                    </p>
+                    <p class="text-muted small">
+                        لا يمكن التراجع عن هذا الإجراء بعد الحذف.
+                    </p>
+
+                    <form method="post" class="d-flex justify-content-between mt-4">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            🗑 حذف نهائي
+                        </button>
+                        <a href="{% url 'admin_group_list' %}" class="btn btn-secondary">
+                            ❌ إلغاء
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

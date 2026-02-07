@@ -1,6 +1,11 @@
 from django import forms
 from django.forms import inlineformset_factory
 from .models import Invoice, InvoiceItem, JournalEntry, JournalEntryLine
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from django.contrib.auth.models import  User, Group, Permission
+from django.contrib.auth import get_user_model
+
+
 
 
 class InvoiceForm(forms.ModelForm):
@@ -116,3 +121,119 @@ JournalEntryLineFormSet = inlineformset_factory(
     extra=2,
     can_delete=True
 )
+
+
+
+User = get_user_model()
+
+
+class AdminUserCreateForm(UserCreationForm):
+    groups = forms.ModelMultipleChoiceField(
+        queryset=Group.objects.all(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="المجموعات"
+    )
+
+    user_permissions = forms.ModelMultipleChoiceField(
+        queryset=Permission.objects.all(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="الصلاحيات"
+    )
+
+    class Meta:
+        model = User
+        fields = (
+            'username',
+            'email',
+            'is_active',
+            'is_staff',
+            'is_superuser',
+            'groups',
+            'user_permissions',
+        )
+
+
+class AdminUserEditForm(UserChangeForm):
+    password = None  # إخفاء كلمة المرور
+
+    groups = forms.ModelMultipleChoiceField(
+        queryset=Group.objects.all(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple
+    )
+
+    user_permissions = forms.ModelMultipleChoiceField(
+        queryset=Permission.objects.all(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple
+    )
+
+    class Meta:
+        model = User
+        fields = (
+            'username',
+            'email',
+            'is_active',
+            'is_staff',
+            'is_superuser',
+            'groups',
+            'user_permissions',
+        )
+
+
+
+User = get_user_model()
+
+class AdminUserForm(forms.ModelForm):
+    groups = forms.ModelMultipleChoiceField(
+        queryset=Group.objects.all(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label="الصلاحيات (المجموعات)"
+    )
+
+    password = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput,
+        label="كلمة المرور"
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            'username',
+            'first_name',
+            'last_name',
+            'email',
+            'is_active',
+            'groups',
+        ]
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+
+        if self.cleaned_data.get('password'):
+            user.set_password(self.cleaned_data['password'])
+
+        if commit:
+            user.save()
+            self.save_m2m()
+
+        return user
+    
+
+
+class GroupForm(forms.ModelForm):
+    permissions = forms.ModelMultipleChoiceField(
+        queryset=Permission.objects.all().order_by('content_type__app_label'),
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label="الصلاحيات"
+    )
+
+    class Meta:
+        model = Group
+        fields = ['name', 'permissions']
+

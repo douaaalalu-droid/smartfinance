@@ -9,6 +9,19 @@ urlpatterns = [
     path('accountant-dashboard/', views.accountant_dashboard, name='accountant_dashboard'),
     path('manager-dashboard/', views.manager_dashboard, name='manager_dashboard'),
     path('data-entry-dashboard/', views.data_entry_dashboard, name='data_entry_dashboard'),
+   
+    # المستخدمون
+path('admin-dashboard/users/',views.admin_users_list, name='admin_user_list'),
+path('admin-dashboard/users/create/', views.admin_user_create, name='admin_user_create'),
+path('admin-dashboard/users/<int:user_id>/edit/', views.admin_user_update, name='admin_user_update'),
+path('admin-dashboard/users/<int:user_id>/delete/', views.admin_user_delete, name='admin_user_delete'),
+
+
+# Groups
+path('admin-dashboard/groups/', views.admin_group_list, name='admin_group_list'),
+path('admin-dashboard/groups/create/', views.admin_group_create, name='admin_group_create'),
+path('admin-dashboard/groups/<int:group_id>/edit/', views.admin_group_update, name='admin_group_update'),
+path('admin-dashboard/groups/<int:group_id>/delete/', views.admin_group_delete, name='admin_group_delete'),
 
     path('logout/', views.logout_view, name='logout'),
 

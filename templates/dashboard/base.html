@@ -98,6 +98,22 @@
         .content-inner {
             margin: 0 auto;
         }
+        .card {
+    border-radius: 6px;
+}
+
+.card-header {
+    font-weight: bold;
+}
+
+.table thead {
+    background-color: #f8f9fa;
+}
+
+.badge {
+    font-size: 0.85rem;
+}
+
     </style>
 </head>
 <body>
@@ -118,6 +134,7 @@
                 {% if perms.accounts.view_trial_balance %}
                 <a class="btn btn-sm btn-outline-light" href="{% url 'trial_balance' %}">📊 ميزان المراجعة</a>
                 {% endif %}
+            
                 <a href="{% url 'logout' %}" class="btn btn-sm btn-danger">🚪 تسجيل الخروج</a>
                 <button type="button" onclick="window.history.back();" class="back-btn btn-sm mt-2">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-arrow-left" viewBox="0 0 16 16">

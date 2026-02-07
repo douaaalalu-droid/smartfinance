@@ -17,6 +17,16 @@ from django.utils import timezone
 from .models import AccountingPeriod
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.contrib.auth.models import Group, Permission
+from .models import User
+from django.contrib.auth import get_user_model
+from .forms import AdminUserCreateForm, AdminUserEditForm
+from .decorators import role_required
+from .forms import GroupForm
+
+
+
+User = get_user_model()
 
 
 
@@ -39,29 +49,37 @@ def role_required(*roles):
 
 #  تسجيل الدخول
 def login_view(request):
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
 
         user = authenticate(request, username=username, password=password)
 
-        if user:
+        if user is not None:
             login(request, user)
 
+            # التحويل الصحيح حسب الدور
             if user.role == 'admin':
-                return redirect('admin_dashboard')
+                return redirect('admin_user_list')
+
             elif user.role == 'accountant':
                 return redirect('accountant_dashboard')
-            elif user.role == 'manager':
-                return redirect('manager_dashboard')
+
             elif user.role == 'data_entry':
                 return redirect('data_entry_dashboard')
 
-        return render(request, 'login.html', {
-            'error': 'بيانات الدخول غير صحيحة'
-        })
+            elif user.role == 'financial_manager':
+                return redirect('financial_manager_dashboard')
 
-    return render(request, 'login.html')
+            else:
+                return redirect('login')
+
+        else:
+            return render(request, 'accounts/login.html', {
+                'error': 'اسم المستخدم أو كلمة المرور غير صحيحة'
+            })
+
+    return render(request, 'accounts/login.html')
 
 
 #  لوحة مدير النظام
@@ -75,14 +93,94 @@ def admin_dashboard(request):
         'users_count': users.count(),
         'entries': entries,
     }
-    return render(request, 'dashboard/admin.html', context)
+    return render(request, 'dashboard/admin/dashboard.html', context)
 
+
+#قائمةالمستخدمين
+@login_required
+@role_required('admin')
+def admin_users_list(request):
+    users = User.objects.all().order_by('username')
+
+    q = request.GET.get('q')
+    role = request.GET.get('role')
+    active = request.GET.get('active')
+
+    if q:
+        users = users.filter(username__icontains=q)
+
+    if role:
+        users = users.filter(role=role)
+
+    if active == '1':
+        users = users.filter(is_active=True)
+    elif active == '0':
+        users = users.filter(is_active=False)
+
+    return render(request, 'dashboard/admin/admin_user_list.html', {
+        'users': users,
+        'roles': User.ROLE_CHOICES,
+        'q': q,
+        'role_filter': role,
+        'active_filter': active,
+    })
+
+
+
+#أضافة مستخدم جديد
+@login_required
+@permission_required('auth.add_user', raise_exception=True)
+def admin_user_create(request):
+    form = AdminUserCreateForm(request.POST or None)
+
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, "✅ تم إنشاء المستخدم")
+        return redirect('admin_edit_user')
+
+    return render(request, 'dashboard/admin/admin_user_form.html', {
+        'form': form,
+        'title': 'إضافة مستخدم'
+    })
+
+#تعديل مستخدم
+@login_required
+@role_required('admin')
+def admin_user_update(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+
+    if request.method == 'POST':
+        form = AdminUserEditForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, '✅ تم تحديث المستخدم بنجاح')
+            return redirect('admin_user_list')
+    else:
+        form = AdminUserEditForm(instance=user)
+
+    return render(request, 'dashboard/admin/admin_user_form.html', {
+        'form': form,
+        'title': 'تعديل مستخدم'
+    })
+
+#حذف مستخدم
+@login_required
+@role_required('admin')
+def admin_user_delete(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+
+    if request.method == 'POST':
+        user.delete()
+        messages.success(request, '🗑️ تم حذف المستخدم')
+        return redirect('admin_user_list')
+
+    return render(request, 'dashboard/admin/admin_user_confirm_delete.html', {
+        'user': user
+    })
 
 
 
 #  لوحة المدير المالي
-
-
 @login_required
 @role_required('manager')
 def manager_dashboard(request):
@@ -196,7 +294,6 @@ def accountant_dashboard(request):
 @role_required('data_entry')
 def data_entry_dashboard(request):
 
-    # ✅ تعريف formset بشكل افتراضي (حل الخطأ)
     formset = JournalEntryLineFormSet()
 
     if request.method == 'POST':
@@ -209,7 +306,7 @@ def data_entry_dashboard(request):
             entry.status = 'draft'
 
             try:
-                # ✅ التحقق الجذري من الفترة المحاسبية
+               
                 entry.full_clean()
                 entry.save()
             except ValidationError as e:
@@ -539,6 +636,72 @@ def close_accounting_period(request, period_id):
     period.save()
 
     return redirect('accounting_period_list')
+
+
+
+
+#عرض المجموعات
+from django.contrib.auth.models import Group, Permission
+
+@login_required
+@role_required('admin')
+def admin_group_list(request):
+    groups = Group.objects.all()
+    return render(request, 'dashboard/admin/admin_group_list.html', {
+        'groups': groups
+    })
+
+@login_required
+@role_required('admin')
+def admin_group_create(request):
+    if request.method == 'POST':
+        form = GroupForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "✅ تم إنشاء المجموعة")
+            return redirect('admin_group_list')
+    else:
+        form = GroupForm()
+
+    return render(request, 'dashboard/admin/group_form.html', {
+        'form': form,
+        'title': 'إضافة مجموعة'
+    })
+
+@login_required
+@role_required('admin')
+def admin_group_update(request, group_id):
+    group = get_object_or_404(Group, id=group_id)
+
+    if request.method == 'POST':
+        form = GroupForm(request.POST, instance=group)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "✅ تم تحديث المجموعة")
+            return redirect('admin_group_list')
+    else:
+        form = GroupForm(instance=group)
+
+    return render(request, 'dashboard/admin/group_form.html', {
+        'form': form,
+        'title': 'تعديل مجموعة'
+    })
+
+@login_required
+@role_required('admin')
+def admin_group_delete(request, group_id):
+    group = get_object_or_404(Group, id=group_id)
+
+    if request.method == 'POST':
+        group.delete()
+        messages.success(request, "🗑 تم حذف المجموعة")
+        return redirect('admin_group_list')
+
+    return render(request, 'dashboard/admin/group_confirm_delete.html', {
+        'group': group
+    })
+
+
 
 #  تسجيل الخروج
 @login_required

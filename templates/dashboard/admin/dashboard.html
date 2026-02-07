@@ -1,0 +1,76 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">{{ title }}</h5>
+            </div>
+
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">اسم المستخدم</label>
+                            {{ form.username }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">الدور</label>
+                            {{ form.role }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">الاسم الأول</label>
+                            {{ form.first_name }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">الاسم الأخير</label>
+                            {{ form.last_name }}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">كلمة المرور</label>
+                            {{ form.password }}
+                        </div>
+
+                        <div class="col-md-6 d-flex align-items-center">
+                            <div class="form-check mt-4">
+                                {{ form.is_active }}
+                                <label class="form-check-label">
+                                    مستخدم نشط
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-success">
+                            💾 حفظ
+                        </button>
+                        <a href="{% url 'admin_user_list' %}" class="btn btn-secondary">
+                            رجوع
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

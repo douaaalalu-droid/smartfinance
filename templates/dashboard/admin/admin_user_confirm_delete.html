@@ -1,0 +1,29 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}حذف مستخدم{% endblock %}
+
+{% block content %}
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white">
+        تأكيد الحذف
+    </div>
+
+    <div class="card-body">
+        <p>
+            هل أنت متأكد من حذف المستخدم:
+            <strong>{{ user.username }}</strong> ؟
+        </p>
+
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+                نعم، احذف
+            </button>
+
+            <a href="{% url 'admin_user_list' %}" class="btn btn-secondary">
+                إلغاء
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

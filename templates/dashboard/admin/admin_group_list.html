@@ -1,0 +1,43 @@
+{% extends "dashboard/base.html" %}
+{% block title %}إدارة الصلاحيات{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between mb-3">
+        <h4>🔐 إدارة المجموعات</h4>
+        <a href="{% url 'admin_group_create' %}" class="btn btn-success">
+            ➕ إضافة مجموعة
+        </a>
+    </div>
+
+    <table class="table table-bordered text-center align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>#</th>
+                <th>اسم المجموعة</th>
+                <th>عدد الصلاحيات</th>
+                <th>إجراءات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for group in groups %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ group.name }}</td>
+                <td>{{ group.permissions.count }}</td>
+                <td>
+                    <a href="{% url 'admin_group_update' group.id %}" class="btn btn-sm btn-warning">✏️ تعديل</a>
+                    <a href="{% url 'admin_group_delete' group.id %}" class="btn btn-sm btn-danger">🗑 حذف</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4">لا توجد مجموعات</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+{% endblock %}

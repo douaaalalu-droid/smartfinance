@@ -1,0 +1,39 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}تعديل مستخدم{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-warning text-dark">
+        ✏️ تعديل المستخدم: {{ edit_user.username }}
+    </div>
+
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="mb-3">
+                {{ form.username.label_tag }}
+                {{ form.username }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.role.label_tag }}
+                {{ form.role }}
+            </div>
+
+            <div class="form-check mb-3">
+                {{ form.is_active }}
+                {{ form.is_active.label_tag }}
+            </div>
+
+            <button type="submit" class="btn btn-success">
+                💾 حفظ التغييرات
+            </button>
+
+            <a href="{% url 'admin_user_list' %}" class="btn btn-secondary">
+                رجوع
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

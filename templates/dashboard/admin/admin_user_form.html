@@ -1,0 +1,42 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5>{{ title }}</h5>
+    </div>
+
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+
+            {% for field in form %}
+                <div class="mb-3">
+                    <label class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <div class="text-danger small">
+                            {{ field.errors }}
+                        </div>
+                    {% endif %}
+                    <div class="mb-3">
+    <label class="form-label">الصلاحيات (Groups)</label>
+    {{ form.groups }}
+</div>
+
+                </div>
+            {% endfor %}
+
+            <button type="submit" class="btn btn-primary">
+                💾 حفظ التغييرات
+            </button>
+
+            <a href="{% url 'admin_user_list' %}" class="btn btn-secondary">
+                رجوع
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

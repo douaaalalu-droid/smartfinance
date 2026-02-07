@@ -82,7 +82,6 @@ class Invoice(models.Model):
             total += item.total_price
         return total
 
-    # ✅ هذه داخل الكلاس
     def clean(self):
         period = AccountingPeriod.objects.filter(
             start_date__lte=self.invoice_date,
@@ -95,12 +94,11 @@ class Invoice(models.Model):
         if period.is_closed:
             raise ValidationError("❌ لا يمكن إنشاء فاتورة في فترة محاسبية مقفلة")
 
-        # ربط الفترة تلقائياً
         self.period = period
 
-    # ✅ وهذه داخل الكلاس
+
     def save(self, *args, **kwargs):
-        self.full_clean()  # 🔥 هذا يستدعي clean دائماً
+        self.full_clean() 
         super().save(*args, **kwargs)
 
 
@@ -228,7 +226,6 @@ class JournalEntry(models.Model):
     def __str__(self):
         return f"قيد بتاريخ {self.date}"
 
-    # ✅ التحقق الجذري
     def clean(self):
         period = AccountingPeriod.objects.filter(
             start_date__lte=self.date,
@@ -244,9 +241,9 @@ class JournalEntry(models.Model):
         # ربط الفترة تلقائياً
         self.period = period
 
-    # ✅ يمنع الحفظ من أي مكان
+   
     def save(self, *args, **kwargs):
-        self.full_clean()   # 🔥 يستدعي clean دائمًا
+        self.full_clean()  
         super().save(*args, **kwargs)
 
 

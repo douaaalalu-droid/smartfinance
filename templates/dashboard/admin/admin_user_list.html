@@ -1,0 +1,125 @@
+{% extends "dashboard/base.html" %}
+
+{% block title %}إدارة المستخدمين{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-color: #f8f9fa;
+    }
+    .toolbar {
+        background-color: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .toolbar h3 {
+        font-weight: 700;
+        margin: 0;
+        color: #212529;
+    }
+    .toolbar .actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .toolbar .filters {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .table th {
+        background-color: #f1f3f5;
+        font-weight: 600;
+    }
+    .table td, .table th {
+        vertical-align: middle;
+    }
+</style>
+
+<div class="container-fluid py-3" style="min-height:100vh;">
+
+    <!-- شريط الأدوات -->
+    <div class="toolbar shadow-sm">
+        <h3>👥 إدارة المستخدمين</h3>
+
+        <div class="actions">
+            <a href="{% url 'admin_group_list' %}" class="btn btn-outline-warning">
+                🔐 إدارة الصلاحيات
+            </a>
+            <a href="{% url 'admin_user_create' %}" class="btn btn-success">
+                ➕ إضافة مستخدم
+            </a>
+        </div>
+
+        <form method="get" class="filters w-100 w-md-auto">
+            <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="🔍 بحث باسم المستخدم" style="min-width:220px;">
+
+            <select name="role" class="form-select">
+                <option value="">كل الأدوار</option>
+                {% for key, label in roles %}
+                    <option value="{{ key }}" {% if role_filter == key %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="active" class="form-select">
+                <option value="">الحالة</option>
+                <option value="1" {% if active_filter == '1' %}selected{% endif %}>نشط</option>
+                <option value="0" {% if active_filter == '0' %}selected{% endif %}>موقوف</option>
+            </select>
+
+            <button class="btn btn-primary">بحث</button>
+        </form>
+    </div>
+
+    <!-- جدول المستخدمين -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <table class="table table-hover table-striped text-center align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width:5%;">#</th>
+                        <th>اسم المستخدم</th>
+                        <th>البريد الإلكتروني</th>
+                        <th>الدور</th>
+                        <th>الحالة</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email|default:"—" }}</td>
+                        <td><span class="badge bg-info text-dark">{{ user.get_role_display }}</span></td>
+                        <td>
+                            {% if user.is_active %}
+                                <span class="badge bg-success">نشط</span>
+                            {% else %}
+                                <span class="badge bg-secondary">موقوف</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'admin_user_update' user.id %}" class="btn btn-sm btn-warning">✏️ تعديل</a>
+                            <a href="{% url 'admin_user_delete' user.id %}" class="btn btn-sm btn-danger">🗑 حذف</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-muted">لا يوجد مستخدمون</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
