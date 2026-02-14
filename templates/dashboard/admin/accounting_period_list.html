@@ -1,0 +1,154 @@
+{% extends "dashboard/base.html" %}
+{% block title %}إدارة الفترات المحاسبية{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>📅 الفترات المحاسبية</h3>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">
+            ➕ إضافة فترة
+        </button>
+    </div>
+
+    {% for message in messages %}
+        <div class="alert alert-success">{{ message }}</div>
+    {% endfor %}
+
+    <div class="card">
+        <div class="card-body table-responsive">
+            <table class="table table-bordered table-striped text-center">
+                <thead class="table-dark">
+                    <tr>
+                        <th>الاسم</th>
+                        <th>من</th>
+                        <th>إلى</th>
+                        <th>الحالة</th>
+                        <th>الإجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for period in periods %}
+                    <tr>
+                        <td>{{ period.name }}</td>
+                        <td>{{ period.start_date }}</td>
+                        <td>{{ period.end_date }}</td>
+                        <td>
+                            {% if period.is_closed %}
+                                <span class="badge bg-danger">مقفلة</span>
+                            {% else %}
+                                <span class="badge bg-success">مفتوحة</span>
+                            {% endif %}
+                        </td>
+                        <td>
+
+                            {% if not period.is_closed %}
+                            <a href="?close={{ period.id }}"
+                               class="btn btn-sm btn-dark">
+                               🔒 إقفال
+                            </a>
+                            {% endif %}
+
+                            <button class="btn btn-sm btn-warning"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editModal{{ period.id }}">
+                                ✏ تعديل
+                            </button>
+
+                            <a href="?delete={{ period.id }}"
+                               onclick="return confirm('هل أنت متأكد من الحذف؟')"
+                               class="btn btn-sm btn-danger">
+                               🗑 حذف
+                            </a>
+
+                        </td>
+                    </tr>
+
+                  
+                    <div class="modal fade" id="editModal{{ period.id }}">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="period_id" value="{{ period.id }}">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">تعديل الفترة</h5>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label>اسم الفترة</label>
+                                            <input type="text" name="name"
+                                                   class="form-control"
+                                                   value="{{ period.name }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label>من تاريخ</label>
+                                            <input type="date" name="start_date"
+                                                   class="form-control"
+                                                   value="{{ period.start_date|date:'Y-m-d' }}" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label>إلى تاريخ</label>
+                                            <input type="date" name="end_date"
+                                                   class="form-control"
+                                                   value="{{ period.end_date|date:'Y-m-d' }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button class="btn btn-success">حفظ</button>
+                                        <button type="button" class="btn btn-secondary"
+                                                data-bs-dismiss="modal">إلغاء</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <a href="{% url 'admin_user_list' %}" class="btn btn-secondary">
+            ⬅ رجوع
+        </a>
+    </div>
+
+</div>
+
+
+<div class="modal fade" id="addModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">إضافة فترة جديدة</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>اسم الفترة</label>
+                        <input type="text" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>من تاريخ</label>
+                        <input type="date" name="start_date" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>إلى تاريخ</label>
+                        <input type="date" name="end_date" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary">حفظ</button>
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -283,3 +283,6 @@ class JournalEntryLine(models.Model):
 
     def __str__(self):
         return f"{self.account} | مدين: {self.debit} | دائن: {self.credit}"
+    
+
+

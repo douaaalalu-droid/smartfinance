@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .views import accounting_period_list
 
 urlpatterns = [
     path('', views.login_view, name='login'),
@@ -22,6 +23,9 @@ path('admin-dashboard/groups/', views.admin_group_list, name='admin_group_list')
 path('admin-dashboard/groups/create/', views.admin_group_create, name='admin_group_create'),
 path('admin-dashboard/groups/<int:group_id>/edit/', views.admin_group_update, name='admin_group_update'),
 path('admin-dashboard/groups/<int:group_id>/delete/', views.admin_group_delete, name='admin_group_delete'),
+#الفترات المحاسبية
+path( 'admin-dashboard/periods/', accounting_period_list, name='admin_accounting_period_list'),
+    
 
     path('logout/', views.logout_view, name='logout'),
 

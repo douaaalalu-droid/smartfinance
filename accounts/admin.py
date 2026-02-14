@@ -129,24 +129,7 @@ class AccountAdmin(admin.ModelAdmin):
     search_fields = ('code', 'name')
 
 
-    @admin.register(AccountingPeriod)
-    class AccountingPeriodAdmin(admin.ModelAdmin):
-     list_display = ("name", "start_date", "end_date", "is_closed")
-     actions = ["close_period"]
-
-    def close_period(self, request, queryset):
-        for period in queryset:
-            try:
-                close_accounting_period(period)
-                messages.success(
-                    request,
-                    f"تم إقفال الفترة {period.name}"
-                )
-            except ValidationError as e:
-                messages.error(request, str(e))
-
-    close_period.short_description = "إقفال الفترات المحددة"
-
+    
 
 
 

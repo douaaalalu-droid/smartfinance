@@ -23,6 +23,9 @@ from django.contrib.auth import get_user_model
 from .forms import AdminUserCreateForm, AdminUserEditForm
 from .decorators import role_required
 from .forms import GroupForm
+from .models import AccountingPeriod
+from django.utils import timezone
+
 
 
 
@@ -94,8 +97,6 @@ def admin_dashboard(request):
         'entries': entries,
     }
     return render(request, 'dashboard/admin/dashboard.html', context)
-
-
 #قائمةالمستخدمين
 @login_required
 @role_required('admin')
@@ -127,7 +128,7 @@ def admin_users_list(request):
 
 
 
-#أضافة مستخدم جديد
+#اضافة مستخدم جديد
 @login_required
 @permission_required('auth.add_user', raise_exception=True)
 def admin_user_create(request):
@@ -177,6 +178,59 @@ def admin_user_delete(request, user_id):
     return render(request, 'dashboard/admin/admin_user_confirm_delete.html', {
         'user': user
     })
+
+# إدارة الفترات المحاسبية (لوحة الادمن
+def accounting_period_list(request):
+    periods = AccountingPeriod.objects.all()
+
+    # إضافة أو تعديل
+    if request.method == "POST":
+        period_id = request.POST.get("period_id")
+        name = request.POST.get("name")
+        start_date = request.POST.get("start_date")
+        end_date = request.POST.get("end_date")
+
+        # تعديل
+        if period_id:
+            period = get_object_or_404(AccountingPeriod, id=period_id)
+            period.name = name
+            period.start_date = start_date
+            period.end_date = end_date
+            period.save()
+            messages.success(request, "تم تعديل الفترة بنجاح")
+
+        # إضافة
+        else:
+            AccountingPeriod.objects.create(
+                name=name,
+                start_date=start_date,
+                end_date=end_date
+            )
+            messages.success(request, "تم إنشاء الفترة بنجاح")
+
+        return redirect('admin_accounting_period_list')
+
+    # حذف
+    if request.GET.get("delete"):
+        period = get_object_or_404(AccountingPeriod, id=request.GET.get("delete"))
+        period.delete()
+        messages.success(request, "تم حذف الفترة")
+        return redirect('admin_accounting_period_list')
+
+    # إقفال
+    if request.GET.get("close"):
+        period = get_object_or_404(AccountingPeriod, id=request.GET.get("close"))
+        period.is_closed = True
+        period.closed_at = timezone.now()
+        period.closed_by = request.user
+        period.save()
+        messages.success(request, "تم إقفال الفترة")
+        return redirect('admin_accounting_period_list')
+
+    return render(request, "dashboard/admin/accounting_period_list.html", {
+        "periods": periods
+    })
+
 
 
 
@@ -391,6 +445,18 @@ def create_invoice(request):
 
                     if formset.is_valid():
                         items = formset.save(commit=False)
+                        valid_items = [
+                            item for item in items
+                            if item and not getattr(item, 'DELETE', False)
+                        ]
+
+                        if not valid_items:
+                            invoice.delete() 
+                            messages.error(request, "❌ لا يمكن حفظ فاتورة بدون بنود")
+                            return render(request, 'invoices/create_invoice.html', {
+                                'invoice_form': invoice_form,
+                                'formset': formset
+                            })
 
                         total = 0
                         for item in items:
@@ -412,7 +478,7 @@ def create_invoice(request):
                         messages.error(request, "❌ يوجد خطأ في بنود الفاتورة")
 
             except ValidationError as e:
-                # ✅ هذا هو السطر الحاسم
+               
                 invoice_form.add_error(None, e.messages[0])
 
         else:
@@ -622,27 +688,7 @@ def trial_balance(request):
 
     return render(request, 'accounts/trial_balance.html', context)
 
-
-
-
-#الإقفال المحاسبي
-@permission_required('accounts.close_accounting_period', raise_exception=True)
-def close_accounting_period(request, period_id):
-    period = get_object_or_404(AccountingPeriod, id=period_id)
-
-    period.is_closed = True
-    period.closed_at = timezone.now()
-    period.closed_by = request.user
-    period.save()
-
-    return redirect('accounting_period_list')
-
-
-
-
 #عرض المجموعات
-from django.contrib.auth.models import Group, Permission
-
 @login_required
 @role_required('admin')
 def admin_group_list(request):
@@ -700,8 +746,6 @@ def admin_group_delete(request, group_id):
     return render(request, 'dashboard/admin/group_confirm_delete.html', {
         'group': group
     })
-
-
 
 #  تسجيل الخروج
 @login_required
