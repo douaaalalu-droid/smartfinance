@@ -287,7 +287,24 @@ def accountant_dashboard(request):
             formset = JournalEntryLineFormSet(request.POST, instance=entry)
 
             if formset.is_valid():
-                formset.save()
+                lines = formset.save(commit=False)
+
+                #  منع حفظ قيد بدون حركات
+                valid_lines = [
+                    line for line in lines
+                    if line and not getattr(line, 'DELETE', False)
+                ]
+
+                if not valid_lines:
+                    entry.delete()
+                    messages.error(request, "❌ لا يمكن حفظ قيد بدون حركات")
+                    return redirect('accountant_dashboard')
+
+                # حفظ الحركات
+                for line in valid_lines:
+                    line.entry = entry
+                    line.save()
+
 
                 #  التحقق من توازن القيد
                 total_debit = entry.lines.aggregate(
@@ -372,7 +389,23 @@ def data_entry_dashboard(request):
             formset = JournalEntryLineFormSet(request.POST, instance=entry)
 
             if formset.is_valid():
-                formset.save()
+                lines = formset.save(commit=False)
+
+                #  منع حفظ قيد بدون حركات
+                valid_lines = [
+                    line for line in lines
+                    if line and not getattr(line, 'DELETE', False)
+                ]
+
+                if not valid_lines:
+                    entry.delete()
+                    messages.error(request, "❌ لا يمكن حفظ قيد بدون حركات")
+                    return redirect('data_entry_dashboard')
+
+                # حفظ الحركات
+                for line in valid_lines:
+                    line.entry = entry
+                    line.save()
 
                 # التحقق من توازن القيد
                 total_debit = entry.lines.aggregate(
