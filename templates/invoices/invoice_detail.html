@@ -1,4 +1,8 @@
 {% extends 'dashboard/base.html' %}
+{% block currency_selector %}
+    {% include 'partials/currency_selector.html' %}
+{% endblock %}
+
 {% block title %}عرض الفاتورة{% endblock %}
 
 {% block content %}
@@ -50,8 +54,8 @@
         </table>
 
         <div class="text-end fw-bold fs-5 mt-3">
-            💰 الإجمالي الكلي: {{ invoice.total_amount }}
-        </div>
+            💰 الإجمالي الكلي: {{ invoice.total_amount|currency:request.session.currency }}
+
     </div>
 </div>
 

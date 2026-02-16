@@ -454,11 +454,23 @@ def data_entry_dashboard(request):
         'formset': formset,
         'entries': entries
     })
+#لتغيير العملة 
+def set_currency(request):
+    currency = request.GET.get('currency')
+
+    if currency in ['old_syp', 'new_syp', 'usd']:
+        request.session['currency'] = currency
+
+    return redirect(request.META.get('HTTP_REFERER', '/'))
+
 
 #  إنشاء فاتورة
 @login_required
 @role_required('accountant', 'data_entry')
 def create_invoice(request):
+    if "currency" not in request.session:
+     request.session["currency"] = "old_syp"
+
     invoice_form = InvoiceForm()
     formset = InvoiceItemFormSet(queryset=InvoiceItem.objects.none())
 

@@ -1,99 +1,146 @@
 {% extends 'dashboard/base.html' %}
+{% block currency_selector %}
+<form method="get" action="{% url 'set_currency' %}" class="ms-3">
+    <select name="currency" onchange="this.form.submit()"
+            class="form-select form-select-sm" style="width:150px;">
+
+        <option value="old_syp"
+            {% if request.session.currency == 'old_syp' or not request.session.currency %}selected{% endif %}>
+            ل.س قديمة
+        </option>
+
+        <option value="new_syp"
+            {% if request.session.currency == 'new_syp' %}selected{% endif %}>
+            ل.س جديدة
+        </option>
+
+        <option value="usd"
+            {% if request.session.currency == 'usd' %}selected{% endif %}>
+            دولار
+        </option>
+
+    </select>
+</form>
+{% endblock %}
 
 {% block content %}
-<a href="{% url 'create_invoice' %}" class="btn btn-primary mb-3">
-➕ إدخال فاتورة
-</a>
 
 
+<div class="container-fluid px-4 py-4">
 
-<div class="card mb-4">
-    <div class="card-header bg-primary text-white">
-        بيانات القيد المحاسبي
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="{% url 'create_invoice' %}" class="btn btn-primary px-4">
+            ➕ إدخال فاتورة
+        </a>
     </div>
 
-    
-        <form method="post">
-            {% csrf_token %}
-            {% if form.non_field_errors%}
-            <div class="alert alert-danger">
-                {{ form.non_field_errors}}
-            </div>
-            {% endif%}
+    <div class="card shadow-sm border-0 mb-5">
+        <div class="card-header bg-primary text-white fw-bold py-3">
+            بيانات القيد المحاسبي
+        </div>
 
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <label>التاريخ</label>
-                    {{ form.date }}
+        <div class="card-body p-4">
+
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+
+                <div class="row g-4 mb-4">
+                    <div class="col-lg-3 col-md-4">
+                        <label class="form-label fw-bold">التاريخ</label>
+                        {{ form.date }}
+                    </div>
+
+                    <div class="col-lg-9 col-md-8">
+                        <label class="form-label fw-bold">الوصف</label>
+                        {{ form.description }}
+                    </div>
                 </div>
 
-                <div class="col-md-8">
-                    <label>الوصف</label>
-                    {{form.description}}
+                {{ formset.management_form }}
+
+                <div class="table-responsive mb-4">
+                    <table class="table table-bordered table-hover align-middle text-center">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:35%">الحساب</th>
+                                <th style="width:20%">مدين</th>
+                                <th style="width:20%">دائن</th>
+                                <th style="width:10%">حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for line in formset %}
+                            <tr>
+                                <td>{{ line.account }}</td>
+                                <td>{{ line.debit }}</td>
+                                <td>{{ line.credit }}</td>
+                                <td>{{ line.DELETE }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
+
+                <div class="text-end">
+                    <button class="btn btn-success px-5 py-2">
+                        💾 حفظ القيد
+                    </button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    <div class="d-flex align-items-center mb-3">
+        <a href="{% url 'accountant_dashboard' %}" class="btn btn-secondary">
+            القيود التي قمت بإدخالها
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle text-center">
+                    <thead class="table-light">
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>الحساب</th>
+                            <th>مدين</th>
+                            <th>دائن</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for entry in entries %}
+                            {% for line in entry.lines.all %}
+                            <tr>
+                                <td>{{ entry.date }}</td>
+                                <td>{{ line.account }}</td>
+                                <td>{{ line.debit }}</td>
+                                <td>{{ line.credit }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="py-4">
+                                لا توجد قيود
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
 
-            {{formset.management_form}}
-    <table class="table table-bordered text-center">
-        <thead>
-            <tr>
-                <th>الحساب</th>
-                <th>مدين</th>
-                <th>دائن</th>
-                <th>حذف</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for line in formset %}
-           <tr>
-    <td>{{ line.account }}</td>
-    <td>{{ line.debit }}</td>
-    <td>{{ line.credit }}</td>
-    <td> {{ line.DELETE }} </td>
-</tr>
-          {%endfor%}
-        </tbody>
-    </table>
-
-    <button class="btn btn-success mt-3">💾 حفظ القيد</button>
-</form>
-    
+        </div>
     </div>
-</div>
 
-<div class="mb-3">
-       <a href="{% url 'accountant_dashboard' %}" class="btn btn-secondary">
-        القيود التي قمت بإدخالها
-       </a>
-    <div class="card-body">
-    <table class="table table-bordered text-center">
-    <thead>
-        <tr>
-            <th>التاريخ</th>
-            <th>الحساب</th>
-            <th>مدين</th>
-            <th>دائن</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for entry in entries %}
-            {% for line in entry.lines.all %}
-            <tr>
-                <td>{{ entry.date }}</td>
-                <td>{{ line.account}}</td>
-                <td>{{ line.debit }}</td>
-                <td>{{ line.credit }}</td>
-            </tr>
-            {% endfor %}
-        {% empty %}
-        <tr>
-            <td colspan="6">لا توجد قيود</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
-
-    </div>
 </div>
 
 {% endblock %}

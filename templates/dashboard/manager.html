@@ -1,4 +1,28 @@
 {% extends 'dashboard/base.html' %}
+{% block currency_selector %}
+<form method="get" action="{% url 'set_currency' %}" class="ms-3">
+    <select name="currency" onchange="this.form.submit()"
+            class="form-select form-select-sm" style="width:150px;">
+
+        <option value="old_syp"
+            {% if request.session.currency == 'old_syp' or not request.session.currency %}selected{% endif %}>
+            ل.س قديمة
+        </option>
+
+        <option value="new_syp"
+            {% if request.session.currency == 'new_syp' %}selected{% endif %}>
+            ل.س جديدة
+        </option>
+
+        <option value="usd"
+            {% if request.session.currency == 'usd' %}selected{% endif %}>
+            دولار
+        </option>
+
+    </select>
+</form>
+{% endblock %}
+
 {% block content %}
 
 <h3 class="mb-4">لوحة تحكم المدير المالي</h3>

@@ -25,7 +25,10 @@ path('admin-dashboard/groups/<int:group_id>/edit/', views.admin_group_update, na
 path('admin-dashboard/groups/<int:group_id>/delete/', views.admin_group_delete, name='admin_group_delete'),
 #الفترات المحاسبية
 path( 'admin-dashboard/periods/', accounting_period_list, name='admin_accounting_period_list'),
-    
+#تبديل العملة 
+path('set-currency/', views.set_currency, name='set_currency'),
+
+
 
     path('logout/', views.logout_view, name='logout'),
 

@@ -1,4 +1,29 @@
 {% extends 'dashboard/base.html' %}
+{% block currency_selector %}
+<form method="get" action="{% url 'set_currency' %}" class="ms-3">
+    <select name="currency" onchange="this.form.submit()"
+            class="form-select form-select-sm" style="width:150px;">
+
+        <option value="old_syp"
+            {% if request.session.currency == 'old_syp' or not request.session.currency %}selected{% endif %}>
+            ل.س قديمة
+        </option>
+
+        <option value="new_syp"
+            {% if request.session.currency == 'new_syp' %}selected{% endif %}>
+            ل.س جديدة
+        </option>
+
+        <option value="usd"
+            {% if request.session.currency == 'usd' %}selected{% endif %}>
+            دولار
+        </option>
+
+    </select>
+</form>
+{% endblock %}
+
+{% load currency_filters %}
 
 {% block content %}
 
@@ -12,47 +37,44 @@
     </div>
     {% endif %}
 
-
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
             بيانات الفاتورة
         </div>
-  <div class="card-body row">
-         <div class="col-md-3 mb-3">
-        {{ invoice_form.invoice_number.label_tag }}
-        {{ invoice_form.invoice_number }}
+        <div class="card-body row">
 
-        {% if invoice_form.invoice_number.errors %}
-            <div class="text-danger mt-1">
-                {{ invoice_form.invoice_number.errors }}
+            <div class="col-md-3 mb-3">
+                {{ invoice_form.invoice_number.label_tag }}
+                {{ invoice_form.invoice_number }}
+                {% if invoice_form.invoice_number.errors %}
+                    <div class="text-danger mt-1">
+                        {{ invoice_form.invoice_number.errors }}
+                    </div>
+                {% endif %}
             </div>
-        {% endif %}
-    </div>
 
-        <div class="col-md-3 mb-3">
-        {{ invoice_form.invoice_type.label_tag }}
-        {{ invoice_form.invoice_type }}
-    </div>
-
-    <!-- اسم العميل -->
-    <div class="col-md-3 mb-3">
-        {{ invoice_form.customer_name.label_tag }}
-        {{ invoice_form.customer_name }}
-    </div>
-
-    <!-- تاريخ الفاتورة -->
-    <div class="col-md-3 mb-3">
-        {{ invoice_form.invoice_date.label_tag }}
-        {{ invoice_form.invoice_date }}
-
-        {% if invoice_form.invoice_date.errors %}
-            <div class="text-danger mt-1">
-                {{ invoice_form.invoice_date.errors }}
+            <div class="col-md-3 mb-3">
+                {{ invoice_form.invoice_type.label_tag }}
+                {{ invoice_form.invoice_type }}
             </div>
-        {% endif %}
-    </div>
 
-</div>
+            <div class="col-md-3 mb-3">
+                {{ invoice_form.customer_name.label_tag }}
+                {{ invoice_form.customer_name }}
+            </div>
+
+            <div class="col-md-3 mb-3">
+                {{ invoice_form.invoice_date.label_tag }}
+                {{ invoice_form.invoice_date }}
+                {% if invoice_form.invoice_date.errors %}
+                    <div class="text-danger mt-1">
+                        {{ invoice_form.invoice_date.errors }}
+                    </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
 
     <div class="card">
         <div class="card-header bg-dark text-white">
@@ -70,7 +92,6 @@
                         <th>سعر الوحدة</th>
                         <th>الإجمالي</th>
                         <th>حذف</th>
-                        
                     </tr>
                 </thead>
                 <tbody id="invoice-items">
@@ -91,37 +112,52 @@
                     {% endfor %}
                 </tbody>
             </table>
+
             <div class="mt-3">
-                <button type="button" id="add-item" class="btn btn-outline-primary mt-2" >
-                     ➕ إضافة بند جديد
+                <button type="button" id="add-item" class="btn btn-outline-primary mt-2">
+                    ➕ إضافة بند جديد
                 </button>
+            </div>
+
+            <!-- ✅ التعديل هنا -->
+            <div class="mt-3 text-end">
+                <strong>الإجمالي الكلي</strong>
+
+                {% with request.session.currency|default:"old_syp" as current_currency %}
+                    <span id="grand-total">
+                        {{ 0|currency:current_currency }}
+                    </span>
+
+                    {% if current_currency == 'new_syp' %}
+                        ل.س جديدة
+                    {% elif current_currency == 'usd' %}
+                        $
+                    {% else %}
+                        ل.س قديمة
+                    {% endif %}
+                {% endwith %}
+            </div>
 
         </div>
-        <div class="mt-3 text-end">
-            <strong>الإجمالي الكلي</strong>
-            <span id="grand-total">0</span>
-        </div>
-
     </div>
-</div>
 
     <div class="mt-3 text-end">
         <button type="submit" class="btn btn-success">
             💾 حفظ الفاتورة
         </button>
     </div>
-    
- <div id="empty-form" style="display:none;">
-    {{ formset.empty_form }}
- </div>
+
+    <div id="empty-form" style="display:none;">
+        {{ formset.empty_form }}
+    </div>
 
 </form>
+
 <script>
 const itemsContainer = document.getElementById('invoice-items');
 const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
 const emptyFormTemplate = document.getElementById('empty-form').innerHTML;
 
-// تحديث الإجماليات
 function updateTotals() {
     let grandTotal = 0;
 
@@ -150,19 +186,6 @@ function updateTotals() {
     document.getElementById('grand-total').innerText = grandTotal.toFixed(2);
 }
 
-// إضافة بند جديد
-document.getElementById('add-item').addEventListener('click', function () {
-    let formIndex = parseInt(totalFormsInput.value);
-
-    let newFormHtml = emptyFormTemplate.replace(/__prefix__/g, formIndex);
-
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = newFormHtml;
-
-    const row = document.createElement('tr');
-    row.classList.add('item-row');
-
- // إضافة بند جديد 
 document.getElementById('add-item').addEventListener('click', function () {
     const formIndex = parseInt(totalFormsInput.value);
     const newFormHtml = emptyFormTemplate.replace(/__prefix__/g, formIndex);
@@ -173,27 +196,22 @@ document.getElementById('add-item').addEventListener('click', function () {
     const row = document.createElement('tr');
     row.classList.add('item-row');
 
-    // الوصف
     let td = document.createElement('td');
     td.appendChild(tempDiv.querySelector('[name$="description"]'));
     row.appendChild(td);
 
-    // الكمية
     td = document.createElement('td');
     td.appendChild(tempDiv.querySelector('[name$="quantity"]'));
     row.appendChild(td);
 
-    // سعر الوحدة
     td = document.createElement('td');
     td.appendChild(tempDiv.querySelector('[name$="unit_price"]'));
     row.appendChild(td);
 
-    // الإجمالي
     td = document.createElement('td');
     td.innerHTML = `<input type="text" class="form-control total-field" readonly>`;
     row.appendChild(td);
 
-    // حذف
     td = document.createElement('td');
     td.innerHTML = `<button type="button" class="btn btn-danger btn-sm remove-row">🗑</button>`;
     row.appendChild(td);
@@ -202,12 +220,6 @@ document.getElementById('add-item').addEventListener('click', function () {
     totalFormsInput.value = formIndex + 1;
 });
 
-
-    itemsContainer.appendChild(row);
-    totalFormsInput.value = formIndex + 1;
-});
-
-// حذف بند
 document.addEventListener('click', function (e) {
     const btn = e.target.closest('.remove-row');
     if (!btn) return;
@@ -225,7 +237,6 @@ document.addEventListener('click', function (e) {
     updateTotals();
 });
 
-// تحديث تلقائي
 document.addEventListener('input', function (e) {
     if (e.target.name?.includes('quantity') || e.target.name?.includes('unit_price')) {
         updateTotals();
