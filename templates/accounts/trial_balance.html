@@ -1,48 +1,35 @@
 {% extends 'dashboard/base.html' %}
+{% load currency_filters %}
+
 {% block currency_selector %}
 <form method="get" action="{% url 'set_currency' %}" class="ms-3">
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
     <select name="currency" onchange="this.form.submit()"
             class="form-select form-select-sm" style="width:150px;">
-
-        <option value="old_syp"
-            {% if request.session.currency == 'old_syp' or not request.session.currency %}selected{% endif %}>
-            ل.س قديمة
-        </option>
-
-        <option value="new_syp"
-            {% if request.session.currency == 'new_syp' %}selected{% endif %}>
-            ل.س جديدة
-        </option>
-
-        <option value="usd"
-            {% if request.session.currency == 'usd' %}selected{% endif %}>
-            دولار
-        </option>
-
+        <option value="old_syp" {% if current_currency == 'old_syp' %}selected{% endif %}>ل.س قديمة</option>
+        <option value="new_syp" {% if current_currency == 'new_syp' %}selected{% endif %}>ل.س جديدة</option>
+        <option value="usd" {% if current_currency == 'usd' %}selected{% endif %}>دولار</option>
     </select>
 </form>
 {% endblock %}
-
 
 {% block title %}ميزان المراجعة{% endblock %}
 
 {% block content %}
 
-<<div class="card mb-4 shadow-sm">
+<div class="card mb-4 shadow-sm">
     <div class="card-header text-dark text-center" style="background-color: #cbdeec;">
         <h4 class="mb-1 fw-bold">
             📊 ميزان المراجعة
         </h4>
-        <span class="badge text-white" style="background: linear-gradient(90deg, #243949, #7ea3c1); font-size: 0.9rem; padding: 6px 12px;">
+        <span class="badge text-white"
+              style="background: linear-gradient(90deg, #243949, #7ea3c1); font-size: 0.9rem; padding: 6px 12px;">
             Trial Balance
         </span>
     </div>
-</div>
-
 
     <div class="card-body">
 
-      
         <div class="row mb-3">
             <div class="col-md-6">
                 <strong>تاريخ التقرير:</strong>
@@ -54,7 +41,6 @@
             </div>
         </div>
 
-       
         <div class="table-responsive">
             <table class="table table-bordered table-hover align-middle text-center">
                 <thead class="table-dark">
@@ -72,10 +58,10 @@
                             {{ row.account.name }}
                         </td>
                         <td class="text-end">
-                            {{ row.debit|floatformat:2 }}
+                            {{ row.debit|currency:current_currency }}
                         </td>
                         <td class="text-end">
-                            {{ row.credit|floatformat:2 }}
+                            {{ row.credit|currency:current_currency }}
                         </td>
                     </tr>
                     {% empty %}
@@ -91,17 +77,16 @@
                     <tr>
                         <td class="text-center">الإجمالي</td>
                         <td class="text-end">
-                            {{ total_debit|floatformat:2 }}
+                            {{ total_debit|currency:current_currency }}
                         </td>
                         <td class="text-end">
-                            {{ total_credit|floatformat:2 }}
+                            {{ total_credit|currency:current_currency }}
                         </td>
                     </tr>
                 </tfoot>
             </table>
         </div>
 
-     
         {% if total_debit != total_credit %}
         <div class="alert alert-danger mt-3">
             ⚠️ الميزان غير متوازن! يرجى مراجعة القيود.

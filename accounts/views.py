@@ -25,6 +25,7 @@ from .decorators import role_required
 from .forms import GroupForm
 from .models import AccountingPeriod
 from django.utils import timezone
+from accounts.models import ExchangeRate
 
 
 
@@ -71,8 +72,8 @@ def login_view(request):
             elif user.role == 'data_entry':
                 return redirect('data_entry_dashboard')
 
-            elif user.role == 'financial_manager':
-                return redirect('financial_manager_dashboard')
+            elif user.role == 'manager':
+                return redirect('manager_dashboard')
 
             else:
                 return redirect('login')
@@ -179,7 +180,7 @@ def admin_user_delete(request, user_id):
         'user': user
     })
 
-# إدارة الفترات المحاسبية (لوحة الادمن
+# إدارة الفترات المحاسبية 
 def accounting_period_list(request):
     periods = AccountingPeriod.objects.all()
 
@@ -282,6 +283,17 @@ def accountant_dashboard(request):
             entry = form.save(commit=False)
             entry.created_by = request.user
             entry.status = 'draft'
+            currency = request.session.get("currency", "old_syp")
+
+            if currency == "usd":
+                exchange_rate = request.POST.get("exchange_rate")
+                if not exchange_rate:
+                    messages.error(request, "❌ يجب إدخال سعر الصرف للدولار")
+                    return redirect('accountant_dashboard')
+                entry.exchange_rate = exchange_rate
+            else:
+                entry.exchange_rate = None
+ 
             entry.save()
 
             formset = JournalEntryLineFormSet(request.POST, instance=entry)
@@ -375,6 +387,17 @@ def data_entry_dashboard(request):
             entry = form.save(commit=False)
             entry.created_by = request.user
             entry.status = 'draft'
+            currency = request.session.get("currency", "old_syp")
+
+            if currency == "usd":
+                exchange_rate = request.POST.get("exchange_rate")
+                if not exchange_rate:
+                    messages.error(request, "❌ يجب إدخال سعر الصرف للدولار")
+                    return redirect('accountant_dashboard')
+                entry.exchange_rate = exchange_rate
+            else:
+                entry.exchange_rate = None
+ 
 
             try:
                
@@ -463,13 +486,12 @@ def set_currency(request):
 
     return redirect(request.META.get('HTTP_REFERER', '/'))
 
-
 #  إنشاء فاتورة
 @login_required
 @role_required('accountant', 'data_entry')
 def create_invoice(request):
     if "currency" not in request.session:
-     request.session["currency"] = "old_syp"
+        request.session["currency"] = "old_syp"
 
     invoice_form = InvoiceForm()
     formset = InvoiceItemFormSet(queryset=InvoiceItem.objects.none())
@@ -506,6 +528,26 @@ def create_invoice(request):
                         total = 0
                         for item in items:
                             item.invoice = invoice
+
+                            # 🔥 التحويل حسب العملة المختارة
+                            currency = request.session.get("currency", "old_syp")
+
+                            if currency == "new_syp":
+                                item.unit_price = item.unit_price * 1000
+                                item.total_price = item.total_price * 1000
+
+                            elif currency == "usd":
+                                latest_rate = ExchangeRate.objects.order_by('-updated_at').first()
+
+                                if not latest_rate:
+                                    raise ValidationError("❌ لا يوجد سعر صرف معرف")
+                                
+                                item.unit_price = item.unit_price * latest_rate.rate
+                                item.total_price = item.total_price * latest_rate.rate
+
+
+                           
+
                             item.save()
                             total += item.total_price
 
@@ -523,7 +565,6 @@ def create_invoice(request):
                         messages.error(request, "❌ يوجد خطأ في بنود الفاتورة")
 
             except ValidationError as e:
-               
                 invoice_form.add_error(None, e.messages[0])
 
         else:
@@ -533,7 +574,6 @@ def create_invoice(request):
         'invoice_form': invoice_form,
         'formset': formset
     })
-
 
 
 #  قائمة الفواتير
@@ -630,7 +670,7 @@ def approve_invoice(request, invoice_id):
         invoice.is_approved = True
         invoice.save(update_fields=['is_approved'])
     except ValidationError as e:
-        messages.error(request, e.message[0])
+        messages.error(request, e.messages[0])
         return redirect('invoice_detail', invoice.id)
 
     messages.success(request, "✅ تم اعتماد الفاتورة وإنشاء القيد المحاسبي بنجاح")

@@ -10,6 +10,12 @@ from django.contrib import messages
 
 
 
+from .models import ExchangeRate
+
+admin.site.register(ExchangeRate)
+
+
+
 # المستخدم
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):

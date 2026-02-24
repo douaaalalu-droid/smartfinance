@@ -1,4 +1,6 @@
 {% extends 'dashboard/base.html' %}
+{% load currency_filters %}
+
 {% block currency_selector %}
     {% include 'partials/currency_selector.html' %}
 {% endblock %}
@@ -42,8 +44,8 @@
                     <td>{{ forloop.counter }}</td>
                     <td>{{ item.description }}</td>
                     <td>{{ item.quantity }}</td>
-                    <td>{{ item.unit_price }}</td>
-                    <td>{{ item.total_price }}</td>
+                    <td>{{ item.unit_price|currency:current_currency }}</td>
+                    <td>{{ item.total_price|currency:current_currency }}</td>
                 </tr>
                 {% empty %}
                 <tr>
@@ -54,8 +56,8 @@
         </table>
 
         <div class="text-end fw-bold fs-5 mt-3">
-            💰 الإجمالي الكلي: {{ invoice.total_amount|currency:request.session.currency }}
-
+            💰 الإجمالي الكلي: {{ invoice.total_amount|currency:current_currency }}
+        </div>
     </div>
 </div>
 

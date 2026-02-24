@@ -109,6 +109,10 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
             text-decoration: none;
         }
+
+        .currency-select {
+            min-width: 170px;
+        }
     </style>
 </head>
 
@@ -128,8 +132,32 @@
                 </span>
             </div>
 
-            <!-- 🔥 هنا أصبح لدينا block اختياري للعملة -->
-            {% block currency_selector %}{% endblock %}
+            <!-- ✅ اختيار العملة -->
+            {% block currency_selector %}
+            <form method="get" id="currencyForm">
+                <select name="currency"
+                        class="form-select form-select-sm currency-select"
+                        onchange="document.getElementById('currencyForm').submit();">
+
+                    <option value="old_syp" {% if request.GET.currency == "old_syp" %}selected{% endif %}>
+                        ليرة سورية قديمة
+                    </option>
+
+                    <option value="new_syp" {% if request.GET.currency == "new_syp" %}selected{% endif %}>
+                        ليرة سورية جديدة
+                    </option>
+
+                    <option value="syp" {% if request.GET.currency == "syp" %}selected{% endif %}>
+                        ليرة سورية
+                    </option>
+
+                    <option value="usd" {% if request.GET.currency == "usd" %}selected{% endif %}>
+                        دولار
+                    </option>
+
+                </select>
+            </form>
+            {% endblock %}
 
             <div class="nav-buttons">
                 {% if perms.accounts.view_general_ledger %}

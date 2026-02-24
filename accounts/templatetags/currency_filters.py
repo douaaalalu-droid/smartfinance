@@ -1,20 +1,30 @@
 from django import template
-from decimal import Decimal, ROUND_HALF_UP
 
 register = template.Library()
 
 @register.filter
 def currency(value, currency_type):
     if value is None:
+        return ""
+
+    try:
+        value = float(value)
+    except:
         return value
 
-    value = Decimal(value)
+    # معدلات التحويل
+    USD_RATE = 12000  
 
-    if currency_type == 'new_syp':
-        return (value / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    if currency_type == "old_syp":
+        return f"{value:,.0f} ل.س قديمة"
 
-    elif currency_type == 'usd':
-        #  لإضافة سعر صرف لاحقاً)
-        return value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    elif currency_type == "syp":
+        return f"{value:,.0f} ل.س"
 
-    return value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    elif currency_type == "usd":
+        return f"{value / USD_RATE:,.2f} $"
+
+    elif currency_type == "new_syp":
+        return f"{value / 100:,.2f} ل.س جديدة"
+
+    return value

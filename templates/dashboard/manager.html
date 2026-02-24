@@ -34,7 +34,7 @@
         <div class="card bg-success text-white text-center">
             <div class="card-body">
                 <h6>إجمالي الإيرادات</h6>
-                <p class="fs-4">{{ income }}</p>
+                <p class="fs-4">{{ income|currency_format }}</p>
             </div>
         </div>
     </div>
@@ -43,7 +43,7 @@
         <div class="card bg-danger text-white text-center">
             <div class="card-body">
                 <h6>إجمالي المصروفات</h6>
-                <p class="fs-4">{{ expense }}</p>
+                <p class="fs-4">{{ expense|currency_format }}</p>
             </div>
         </div>
     </div>
@@ -52,7 +52,7 @@
         <div class="card bg-primary text-white text-center">
             <div class="card-body">
                 <h6>صافي الربح</h6>
-                <p class="fs-4">{{ profit }}</p>
+                <p class="fs-4">{{ profit|currency_format }}</p>
             </div>
         </div>
     </div>
