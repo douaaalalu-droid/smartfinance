@@ -87,18 +87,6 @@ class JournalEntryAdmin(admin.ModelAdmin):
     readonly_fields = ('created_at',)
 
     inlines = [JournalEntryLineInline]
-    def save_related(self, request, form, formsets, change):
-        super().save_related(request, form, formsets, change)
-
-        entry = form.instance
-
-        total_debit = entry.lines.aggregate(total=Sum('debit'))['total'] or 0
-        total_credit = entry.lines.aggregate(total=Sum('credit'))['total'] or 0
-
-        if total_debit != total_credit:
-            raise ValidationError(
-                f"❌ القيد غير متوازن: المدين = {total_debit} ، الدائن = {total_credit}"
-            )
     def save_model(self, request, obj, form, change):
         if obj.period and obj.period.is_closed:
             raise ValidationError("لا يمكن حفظ فاتورة في فترة محاسبية مقفلة")

@@ -1,20 +1,31 @@
 <form method="get" action="{% url 'set_currency' %}">
-    <select name="currency" onchange="this.form.submit()"
-            class="form-select form-select-sm" style="width:180px;">
-
-        <option value="old_syp"
-            {% if current_currency == 'old_syp' %}selected{% endif %}>
-            🇸🇾 ل.س قديمة
-        </option>
-        <option value="new_syp"
-            {% if current_currency == 'new_syp' %}selected{% endif %}>
-            🆕 ل.س جديدة 
-        </option>
-
-        <option value="usd"
-            {% if current_currency == 'usd' %}selected{% endif %}>
-            💵 دولار
-        </option>
-
+    
+    <select name="currency" id="currencySelect">
+        <option value="old_syp">ليرة قديمة</option>
+        <option value="new_syp">ليرة جديدة</option>
+        <option value="usd">دولار</option>
     </select>
+
+    <input type="number"
+           step="0.01"
+           name="exchange_rate"
+           id="exchangeRate"
+           placeholder="سعر الصرف"
+           style="display:none;">
+
+    <button type="submit">تطبيق</button>
 </form>
+
+<script>
+    const currencySelect = document.getElementById("currencySelect");
+    const exchangeInput = document.getElementById("exchangeRate");
+
+    currencySelect.addEventListener("change", function() {
+        if (this.value === "usd") {
+            exchangeInput.style.display = "inline-block";
+        } else {
+            exchangeInput.style.display = "none";
+            exchangeInput.value = "";
+        }
+    });
+</script>

@@ -2,7 +2,40 @@
 {% load currency_filters %}
 
 {% block currency_selector %}
-    {% include 'partials/currency_selector.html' %}
+<form method="get" action="{% url 'set_currency' %}" class="ms-3 d-flex align-items-center gap-2">
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+    <select name="currency"
+            onchange="this.form.submit()"
+            class="form-select form-select-sm"
+            style="width:150px;">
+
+        <option value="old_syp"
+            {% if request.session.currency == 'old_syp' or not request.session.currency %}selected{% endif %}>
+            ل.س قديمة
+        </option>
+
+        <option value="new_syp"
+            {% if request.session.currency == 'new_syp' %}selected{% endif %}>
+            ل.س جديدة
+        </option>
+
+        <option value="usd"
+            {% if request.session.currency == 'usd' %}selected{% endif %}>
+            دولار
+        </option>
+    </select>
+
+    {% if request.session.currency == 'usd' %}
+        <input type="number"
+               step="0.0001"
+               name="exchange_rate"
+               class="form-control form-control-sm"
+               style="width:120px;"
+               value="{{ request.session.exchange_rate }}"
+               required>
+    {% endif %}
+</form>
 {% endblock %}
 
 {% block title %}عرض الفاتورة{% endblock %}
@@ -44,8 +77,8 @@
                     <td>{{ forloop.counter }}</td>
                     <td>{{ item.description }}</td>
                     <td>{{ item.quantity }}</td>
-                    <td>{{ item.unit_price|currency:current_currency }}</td>
-                    <td>{{ item.total_price|currency:current_currency }}</td>
+                    <td>{{ item.unit_price|currency_display:request }}</td>
+                    <td>{{ item.total_price|currency_display:request }}</td>
                 </tr>
                 {% empty %}
                 <tr>
@@ -56,7 +89,8 @@
         </table>
 
         <div class="text-end fw-bold fs-5 mt-3">
-            💰 الإجمالي الكلي: {{ invoice.total_amount|currency:current_currency }}
+            💰 الإجمالي الكلي:
+            {{ invoice.total_amount|currency_display:request }}
         </div>
     </div>
 </div>

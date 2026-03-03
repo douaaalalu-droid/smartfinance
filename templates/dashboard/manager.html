@@ -1,8 +1,13 @@
 {% extends 'dashboard/base.html' %}
+{% load currency_filters %}
+
 {% block currency_selector %}
-<form method="get" action="{% url 'set_currency' %}" class="ms-3">
-    <select name="currency" onchange="this.form.submit()"
-            class="form-select form-select-sm" style="width:150px;">
+<form method="get" action="{% url 'set_currency' %}" class="ms-3 d-flex align-items-center gap-2">
+
+    <select name="currency"
+            onchange="this.form.submit()"
+            class="form-select form-select-sm"
+            style="width:150px;">
 
         <option value="old_syp"
             {% if request.session.currency == 'old_syp' or not request.session.currency %}selected{% endif %}>
@@ -20,6 +25,18 @@
         </option>
 
     </select>
+
+    {% if request.session.currency == 'usd' %}
+        <input type="number"
+               step="0.0001"
+               name="exchange_rate"
+               class="form-control form-control-sm"
+               style="width:120px;"
+               placeholder="سعر الصرف"
+               value="{{ request.session.exchange_rate }}"
+               required>
+    {% endif %}
+
 </form>
 {% endblock %}
 
@@ -34,7 +51,7 @@
         <div class="card bg-success text-white text-center">
             <div class="card-body">
                 <h6>إجمالي الإيرادات</h6>
-                <p class="fs-4">{{ income|currency_format }}</p>
+               <p class="fs-4">{{ income|currency_display:request }}</p>
             </div>
         </div>
     </div>
@@ -43,7 +60,7 @@
         <div class="card bg-danger text-white text-center">
             <div class="card-body">
                 <h6>إجمالي المصروفات</h6>
-                <p class="fs-4">{{ expense|currency_format }}</p>
+               <p class="fs-4">{{ expense|currency_display:request }}</p>
             </div>
         </div>
     </div>
@@ -52,7 +69,7 @@
         <div class="card bg-primary text-white text-center">
             <div class="card-body">
                 <h6>صافي الربح</h6>
-                <p class="fs-4">{{ profit|currency_format }}</p>
+               <p class="fs-4">{{ profit|currency_display:request }}</p>
             </div>
         </div>
     </div>

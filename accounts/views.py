@@ -317,24 +317,6 @@ def accountant_dashboard(request):
                     line.entry = entry
                     line.save()
 
-
-                #  التحقق من توازن القيد
-                total_debit = entry.lines.aggregate(
-                    total=Sum('debit')
-                )['total'] or 0
-
-                total_credit = entry.lines.aggregate(
-                    total=Sum('credit')
-                )['total'] or 0
-
-                if total_debit != total_credit:
-                    entry.delete()
-                    messages.error(
-                        request,
-                        f"❌ القيد غير متوازن: مدين {total_debit} ≠ دائن {total_credit}"
-                    )
-                    return redirect('accountant_dashboard')
-
                 #  نجاح حفظ القيد 
                 messages.success(request, '✅ تم حفظ القيد المحاسبي بنجاح')
                 return redirect('accountant_dashboard')
@@ -414,7 +396,6 @@ def data_entry_dashboard(request):
             if formset.is_valid():
                 lines = formset.save(commit=False)
 
-                #  منع حفظ قيد بدون حركات
                 valid_lines = [
                     line for line in lines
                     if line and not getattr(line, 'DELETE', False)
@@ -425,28 +406,11 @@ def data_entry_dashboard(request):
                     messages.error(request, "❌ لا يمكن حفظ قيد بدون حركات")
                     return redirect('data_entry_dashboard')
 
-                # حفظ الحركات
+                
                 for line in valid_lines:
                     line.entry = entry
                     line.save()
-
-                # التحقق من توازن القيد
-                total_debit = entry.lines.aggregate(
-                    total=Sum('debit')
-                )['total'] or 0
-
-                total_credit = entry.lines.aggregate(
-                    total=Sum('credit')
-                )['total'] or 0
-
-                if total_debit != total_credit:
-                    entry.delete()
-                    messages.error(
-                        request,
-                        f"❌ القيد غير متوازن: مدين {total_debit} ≠ دائن {total_credit}"
-                    )
-                    return redirect('data_entry_dashboard')
-
+                    
                 messages.success(
                     request,
                     '✅ تم حفظ القيد وإرساله للمحاسب للمراجعة'
@@ -478,14 +442,22 @@ def data_entry_dashboard(request):
         'entries': entries
     })
 #لتغيير العملة 
+@login_required
 def set_currency(request):
-    currency = request.GET.get('currency')
+    currency = request.GET.get("currency")
+    exchange_rate = request.GET.get("exchange_rate")
 
-    if currency in ['old_syp', 'new_syp', 'usd']:
-        request.session['currency'] = currency
+    if currency:
+        request.session["currency"] = currency
 
-    return redirect(request.META.get('HTTP_REFERER', '/'))
+        if currency == "usd" and exchange_rate:
+            request.session["exchange_rate"] = exchange_rate
+        else:
+            request.session["exchange_rate"] = None
 
+        request.session.modified = True
+
+    return redirect(request.META.get("HTTP_REFERER", "/"))
 #  إنشاء فاتورة
 @login_required
 @role_required('accountant', 'data_entry')
@@ -529,15 +501,15 @@ def create_invoice(request):
                         for item in items:
                             item.invoice = invoice
 
-                            # 🔥 التحويل حسب العملة المختارة
+                            #  التحويل حسب العملة المختارة
                             currency = request.session.get("currency", "old_syp")
 
                             if currency == "new_syp":
-                                item.unit_price = item.unit_price * 1000
-                                item.total_price = item.total_price * 1000
+                                item.unit_price = item.unit_price * 100
+                                item.total_price = item.total_price * 100
 
                             elif currency == "usd":
-                                latest_rate = ExchangeRate.objects.order_by('-updated_at').first()
+                                latest_rate = ExchangeRate.objects.filter(  currency='usd').order_by('-date').first()
 
                                 if not latest_rate:
                                     raise ValidationError("❌ لا يوجد سعر صرف معرف")
@@ -707,6 +679,7 @@ def approve_journal_entry(request, entry_id):
 @login_required
 @permission_required('accounts.access_general_ledger', raise_exception=True)
 def general_ledger(request):
+    current_currency = request.session.get("currency", "old_syp")
     account_id = request.GET.get('account')
 
     account = None
@@ -718,7 +691,7 @@ def general_ledger(request):
 
         lines = (
             JournalEntryLine.objects
-            .filter(account=account)
+            .filter(account=account, journal_entry__status='approved')
             .select_related('journal_entry')
             .order_by('journal_entry__date', 'id')
         )
@@ -748,11 +721,11 @@ def trial_balance(request):
     accounts = Account.objects.all()
 
     for account in accounts:
-        debit = account.journalentryline_set.aggregate(
+        debit = JournalEntryLine.objects.filter(account=account,journal_entry__status='approved').aggregate(
             total=Sum('debit')
         )['total'] or 0
 
-        credit = account.journalentryline_set.aggregate(
+        credit =JournalEntryLine.objects.filter( account=account, journal_entry__status='approved').aggregate(
             total=Sum('credit')
         )['total'] or 0
 

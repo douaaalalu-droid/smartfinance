@@ -1,30 +1,33 @@
 from django import template
+from decimal import Decimal, InvalidOperation
 
 register = template.Library()
 
 @register.filter
-def currency(value, currency_type):
+def currency_display(value, request):
+
     if value is None:
-        return ""
+        return value
+
+    currency = request.session.get("currency", "old_syp")
+    exchange_rate = request.session.get("exchange_rate")
 
     try:
-        value = float(value)
+        value = Decimal(value)
     except:
         return value
 
-    # معدلات التحويل
-    USD_RATE = 12000  
+    # الدولار
+    if currency == "usd":
+        try:
+            rate = Decimal(exchange_rate)
+            return round(value / rate, 2)
+        except (InvalidOperation, TypeError):
+            return value
 
-    if currency_type == "old_syp":
-        return f"{value:,.0f} ل.س قديمة"
+    # الليرة الجديدة
+    if currency == "new_syp":
+        return round(value / Decimal("100"), 2)
 
-    elif currency_type == "syp":
-        return f"{value:,.0f} ل.س"
-
-    elif currency_type == "usd":
-        return f"{value / USD_RATE:,.2f} $"
-
-    elif currency_type == "new_syp":
-        return f"{value / 100:,.2f} ل.س جديدة"
-
+    # الليرة القديمة
     return value

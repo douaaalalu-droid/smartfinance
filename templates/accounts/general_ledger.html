@@ -1,18 +1,41 @@
 {% extends 'dashboard/base.html' %}
 {% load currency_filters %}
-
 {% block currency_selector %}
-<form method="get" action="{% url 'set_currency' %}" class="ms-3">
+<form method="get" action="{% url 'set_currency' %}" class="ms-3 d-flex align-items-center gap-2">
     <input type="hidden" name="next" value="{{ request.get_full_path }}">
-    <select name="currency" onchange="this.form.submit()"
-            class="form-select form-select-sm" style="width:150px;">
-        <option value="old_syp" {% if current_currency == 'old_syp' %}selected{% endif %}>ل.س قديمة</option>
-        <option value="new_syp" {% if current_currency == 'new_syp' %}selected{% endif %}>ل.س جديدة</option>
-        <option value="usd" {% if current_currency == 'usd' %}selected{% endif %}>دولار</option>
+
+    <select name="currency"
+            onchange="this.form.submit()"
+            class="form-select form-select-sm"
+            style="width:150px;">
+
+        <option value="old_syp"
+            {% if request.session.currency == 'old_syp' or not request.session.currency %}selected{% endif %}>
+            ل.س قديمة
+        </option>
+
+        <option value="new_syp"
+            {% if request.session.currency == 'new_syp' %}selected{% endif %}>
+            ل.س جديدة
+        </option>
+
+        <option value="usd"
+            {% if request.session.currency == 'usd' %}selected{% endif %}>
+            دولار
+        </option>
     </select>
+
+    {% if request.session.currency == 'usd' %}
+        <input type="number"
+               step="0.0001"
+               name="exchange_rate"
+               class="form-control form-control-sm"
+               style="width:120px;"
+               value="{{ request.session.exchange_rate }}"
+               required>
+    {% endif %}
 </form>
 {% endblock %}
-
 {% block content %}
 <div class="card mb-4 shadow-sm">
    <div class="card-header text-dark text-center" style="background-color: #cbdeec;">
@@ -86,13 +109,13 @@
                         {{ line.journal_entry.description }}
                     </td>
                     <td class="text-success fw-bold">
-                        {{ line.debit|currency:current_currency }}
+                   {{ line.debit|currency_display:request }}
                     </td>
                     <td class="text-danger fw-bold">
-                        {{ line.credit|currency:current_currency }}
+                      {{ line.credit|currency_display:request }}
                     </td>
                     <td class="fw-bold">
-                        {{ line.running_balance|currency:current_currency }}
+                      {{ line.credit|currency_display:request }}
                     </td>
                 </tr>
                 {% empty %}

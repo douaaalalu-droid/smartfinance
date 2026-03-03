@@ -1,9 +1,13 @@
 {% extends 'dashboard/base.html' %}
+{% load currency_filters %}
 
 {% block currency_selector %}
-<form method="get" action="{% url 'set_currency' %}" class="ms-3">
-    <select name="currency" onchange="this.form.submit()"
-            class="form-select form-select-sm" style="width:150px;">
+<form method="get" action="{% url 'set_currency' %}" class="ms-3 d-flex align-items-center gap-2">
+
+    <select name="currency"
+            onchange="this.form.submit()"
+            class="form-select form-select-sm"
+            style="width:150px;">
 
         <option value="old_syp"
             {% if request.session.currency == 'old_syp' or not request.session.currency %}selected{% endif %}>
@@ -21,10 +25,21 @@
         </option>
 
     </select>
+
+    {% if request.session.currency == 'usd' %}
+        <input type="number"
+               step="0.0001"
+               name="exchange_rate"
+               class="form-control form-control-sm"
+               style="width:120px;"
+               placeholder="سعر الصرف"
+               value="{{ request.session.exchange_rate }}"
+               required>
+    {% endif %}
+
 </form>
 {% endblock %}
 
-{% load currency_filters %}
 
 {% block content %}
 
@@ -32,6 +47,7 @@
 
 <form method="post">
     {% csrf_token %}
+
     {% if invoice_form.non_field_errors %}
     <div class="alert alert-danger">
         {{ invoice_form.non_field_errors }}
@@ -42,16 +58,12 @@
         <div class="card-header bg-primary text-white">
             بيانات الفاتورة
         </div>
+
         <div class="card-body row">
 
             <div class="col-md-3 mb-3">
                 {{ invoice_form.invoice_number.label_tag }}
                 {{ invoice_form.invoice_number }}
-                {% if invoice_form.invoice_number.errors %}
-                    <div class="text-danger mt-1">
-                        {{ invoice_form.invoice_number.errors }}
-                    </div>
-                {% endif %}
             </div>
 
             <div class="col-md-3 mb-3">
@@ -67,16 +79,9 @@
             <div class="col-md-3 mb-3">
                 {{ invoice_form.invoice_date.label_tag }}
                 {{ invoice_form.invoice_date }}
-                {% if invoice_form.invoice_date.errors %}
-                    <div class="text-danger mt-1">
-                        {{ invoice_form.invoice_date.errors }}
-                    </div>
-                {% endif %}
             </div>
 
-    
-            {% with request.session.currency|default:"old_syp" as current_currency %}
-            {% if current_currency == "usd" %}
+            {% if request.session.currency == "usd" %}
             <div class="col-md-3 mb-3">
                 <label>سعر الصرف</label>
                 <input type="number"
@@ -84,11 +89,10 @@
                        step="0.0001"
                        min="0"
                        class="form-control"
+                       value="{{ request.session.exchange_rate }}"
                        required>
             </div>
             {% endif %}
-            {% endwith %}
-            <!-- ✅ نهاية الإضافة -->
 
         </div>
     </div>
@@ -97,6 +101,7 @@
         <div class="card-header bg-dark text-white">
             بنود الفاتورة
         </div>
+
         <div class="card-body">
 
             {{ formset.management_form }}
@@ -111,6 +116,7 @@
                         <th>حذف</th>
                     </tr>
                 </thead>
+
                 <tbody id="invoice-items">
                     {% for form in formset %}
                     <tr class="item-row">
@@ -121,9 +127,7 @@
                             <input type="text" class="form-control total-field" readonly>
                         </td>
                         <td>
-                            <button type="button" class="btn btn-danger btn-sm remove-row">
-                                🗑
-                            </button>
+                            <button type="button" class="btn btn-danger btn-sm remove-row">🗑</button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -131,18 +135,16 @@
             </table>
 
             <div class="mt-3">
-                <button type="button" id="add-item" class="btn btn-outline-primary mt-2">
+                <button type="button" id="add-item" class="btn btn-outline-primary">
                     ➕ إضافة بند جديد
                 </button>
             </div>
 
             <div class="mt-3 text-end">
-                <strong>الإجمالي الكلي</strong>
-                {% with request.session.currency|default:"old_syp" as current_currency %}
-                    <span id="grand-total">
-                        {{ 0|currency:current_currency }}
-                    </span>
-                {% endwith %}
+                <strong>الإجمالي الكلي:</strong>
+                <span id="grand-total">
+                    {{ 0|currency_display:request }}
+                </span>
             </div>
 
         </div>
@@ -159,96 +161,4 @@
     </div>
 
 </form>
-
-<script>
-const itemsContainer = document.getElementById('invoice-items');
-const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
-const emptyFormTemplate = document.getElementById('empty-form').innerHTML;
-
-function updateTotals() {
-    let grandTotal = 0;
-
-    document.querySelectorAll('.item-row').forEach(row => {
-        if (row.style.display === 'none') return;
-
-        const qty = row.querySelector('input[name$="quantity"]');
-        const price = row.querySelector('input[name$="unit_price"]');
-        const totalField = row.querySelector('.total-field');
-
-        if (!qty || !price) return;
-
-        const q = parseFloat(qty.value) || 0;
-        const p = parseFloat(price.value) || 0;
-
-        if (q === 0 || p === 0) {
-            totalField.value = '⚠';
-            return;
-        }
-
-        const total = q * p;
-        totalField.value = total.toFixed(2);
-        grandTotal += total;
-    });
-
-    document.getElementById('grand-total').innerText = grandTotal.toFixed(2);
-}
-
-document.getElementById('add-item').addEventListener('click', function () {
-    const formIndex = parseInt(totalFormsInput.value);
-    const newFormHtml = emptyFormTemplate.replace(/__prefix__/g, formIndex);
-
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = newFormHtml;
-
-    const row = document.createElement('tr');
-    row.classList.add('item-row');
-
-    let td = document.createElement('td');
-    td.appendChild(tempDiv.querySelector('[name$="description"]'));
-    row.appendChild(td);
-
-    td = document.createElement('td');
-    td.appendChild(tempDiv.querySelector('[name$="quantity"]'));
-    row.appendChild(td);
-
-    td = document.createElement('td');
-    td.appendChild(tempDiv.querySelector('[name$="unit_price"]'));
-    row.appendChild(td);
-
-    td = document.createElement('td');
-    td.innerHTML = `<input type="text" class="form-control total-field" readonly>`;
-    row.appendChild(td);
-
-    td = document.createElement('td');
-    td.innerHTML = `<button type="button" class="btn btn-danger btn-sm remove-row">🗑</button>`;
-    row.appendChild(td);
-
-    itemsContainer.appendChild(row);
-    totalFormsInput.value = formIndex + 1;
-});
-
-document.addEventListener('click', function (e) {
-    const btn = e.target.closest('.remove-row');
-    if (!btn) return;
-
-    const row = btn.closest('.item-row');
-    row.style.display = 'none';
-
-    const inputs = row.querySelectorAll('input, select, textarea');
-    inputs.forEach(input => {
-        if (input.name.includes('DELETE')) {
-            input.checked = true;
-        }
-    });
-
-    updateTotals();
-});
-
-document.addEventListener('input', function (e) {
-    if (e.target.name?.includes('quantity') || e.target.name?.includes('unit_price')) {
-        updateTotals();
-    }
-});
-</script>
-
 {% endblock %}

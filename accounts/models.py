@@ -48,6 +48,11 @@ class Invoice(models.Model):
         ('sale', 'فاتورة بيع'),
         ('purchase', 'فاتورة شراء'),
     )
+    CURRENCY_CHOICES = (
+        ('old_syp', 'ليرة قديمة'),
+        ('new_syp', 'ليرة جديدة'),
+        ('usd', 'دولار'),
+    )
 
     invoice_number = models.CharField(max_length=50, unique=True)
     invoice_type = models.CharField(max_length=10, choices=INVOICE_TYPES)
@@ -59,6 +64,29 @@ class Invoice(models.Model):
         decimal_places=2,
         default=0
     )
+    currency = models.CharField(
+        max_length=10,
+        choices=CURRENCY_CHOICES,
+        default='old_syp'
+    )
+
+  
+    original_total = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    # سعر الصرف الذي استُخدم وقت إنشاء الفاتورة
+    applied_exchange_rate = models.DecimalField(
+        max_digits=15,
+        decimal_places=4,
+        null=True,
+        blank=True
+    )
+
+    
     exchange_rate = models.DecimalField(
         max_digits=15,
         decimal_places=4,
@@ -102,6 +130,10 @@ class Invoice(models.Model):
 
         self.period = period
 
+    def delete(self, *args, **kwargs):
+        if self.is_approved:
+             raise ValidationError("لا يمكن حذف فاتورة معتمدة")
+        super().delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
         self.full_clean() 
@@ -138,13 +170,40 @@ class InvoiceItem(models.Model):
         invoice.save(update_fields=['total_amount'])
 
 
-
 class ExchangeRate(models.Model):
-    rate = models.DecimalField(max_digits=15, decimal_places=2)
-    updated_at = models.DateTimeField(auto_now=True)
+    CURRENCY_CHOICES = (
+        ('old_syp', 'ليرة قديمة'),
+        ('new_syp', 'ليرة جديدة'),
+        ('usd', 'دولار'),
+        
+    )
+
+    currency = models.CharField(
+        max_length=10,
+        choices=CURRENCY_CHOICES,
+        verbose_name='old_syp'
+    )
+
+    rate = models.DecimalField(
+        max_digits=15,
+        decimal_places=4,
+        verbose_name="سعر الصرف"
+    )
+
+    date = models.DateField(
+        verbose_name="تاريخ السعر"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True) 
+
+    class Meta:
+        unique_together = ('currency', 'date')
+        ordering = ['-date']
 
     def __str__(self):
-        return f"{self.rate}"
+        return f"{self.currency} - {self.rate}"
+    
 class Account(models.Model):
     ACCOUNT_TYPES = (
         ('asset', 'أصول'),
@@ -165,7 +224,7 @@ class Account(models.Model):
 
     parent = models.ForeignKey(
         'self',
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name='children',
@@ -254,11 +313,28 @@ class JournalEntry(models.Model):
 
         # ربط الفترة تلقائياً
         self.period = period
+        if self.pk:
+            old = JournalEntry.objects.get(pk=self.pk)
+            if old.status == "approved":
+                raise ValidationError("❌ لا يمكن تعديل قيد معتمد")
 
-   
+        #  التحقق من توازن القيد
+        if self.pk:
+            total_debit = self.lines.aggregate(total=Sum('debit'))['total'] or 0
+            total_credit = self.lines.aggregate(total=Sum('credit'))['total'] or 0
+
+            if total_debit != total_credit:
+                raise ValidationError(
+                    f"❌ القيد غير متوازن: المدين = {total_debit} ، الدائن = {total_credit}"
+                )
+
     def save(self, *args, **kwargs):
-        self.full_clean()  
-        super().save(*args, **kwargs)
+          self.full_clean()
+          super().save(*args, **kwargs)
+    def delete(self, *args, **kwargs):
+        if self.status == "approved":
+            raise ValidationError("❌ لا يمكن حذف قيد معتمد")
+        super().delete(*args, **kwargs)
 
 
 
@@ -298,5 +374,29 @@ class JournalEntryLine(models.Model):
     def __str__(self):
         return f"{self.account} | مدين: {self.debit} | دائن: {self.credit}"
     
+    def clean(self):
+        #  منع القيم السالبة
+        if self.debit < 0:
+            raise ValidationError("❌ لا يمكن إدخال قيمة سالبة في المدين")
 
+        if self.credit < 0:
+            raise ValidationError("❌ لا يمكن إدخال قيمة سالبة في الدائن")
+
+     
+        if self.debit > 0 and self.credit > 0:
+            raise ValidationError("❌ لا يمكن أن يكون السطر مدين ودائن معاً")
+
+     
+        if self.debit == 0 and self.credit == 0:
+            raise ValidationError("❌ يجب إدخال قيمة في المدين أو الدائن")
+        
+    def delete(self, *args, **kwargs):
+        if self.journal_entry.status == "approved":
+         raise ValidationError("❌ لا يمكن حذف سطر من قيد معتمد")
+        super().delete(*args, **kwargs)
+
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 

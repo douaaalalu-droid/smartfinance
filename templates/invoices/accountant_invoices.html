@@ -1,9 +1,13 @@
 {% extends 'dashboard/base.html' %}
 {% load currency_filters %}
+
 {% block currency_selector %}
-<form method="get" action="{% url 'set_currency' %}" class="ms-3">
-    <select name="currency" onchange="this.form.submit()"
-            class="form-select form-select-sm" style="width:150px;">
+<form method="get" action="{% url 'set_currency' %}" class="ms-3 d-flex align-items-center gap-2">
+
+    <select name="currency"
+            onchange="this.form.submit()"
+            class="form-select form-select-sm"
+            style="width:150px;">
 
         <option value="old_syp"
             {% if request.session.currency == 'old_syp' or not request.session.currency %}selected{% endif %}>
@@ -21,15 +25,25 @@
         </option>
 
     </select>
+
+    {% if request.session.currency == 'usd' %}
+        <input type="number"
+               step="0.0001"
+               name="exchange_rate"
+               class="form-control form-control-sm"
+               style="width:120px;"
+               placeholder="سعر الصرف"
+               value="{{ request.session.exchange_rate }}"
+               required>
+    {% endif %}
+
 </form>
 {% endblock %}
-
 
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3 class="fw-bold">📄 مراجعة الفواتير</h3>
-
 
     <a href="{% url 'create_invoice' %}" class="btn btn-primary">
         ➕ إضافة فاتورة جديدة
@@ -64,14 +78,11 @@
                     <td>{{ invoice.get_invoice_type_display }}</td>
                     <td>{{ invoice.customer_name }}</td>
                     <td class="fw-bold text-primary">
-                 {{ invoice.total_amount|currency:current_currency }}
-
-
+                        {{ invoice.total_amount|currency_display:request }}
                     </td>
                     <td>{{ invoice.invoice_date }}</td>
                     <td>{{ invoice.created_by.username }}</td>
 
-                    <!-- الحالة -->
                     <td>
                         {% if invoice.is_approved %}
                             <span class="badge bg-success">✔ معتمدة</span>
@@ -80,16 +91,13 @@
                         {% endif %}
                     </td>
 
-                    <!-- الإجراءات -->
                     <td class="d-flex justify-content-center gap-2">
 
-                        <!-- زر عرض الفاتورة -->
                         <a href="{% url 'invoice_detail' invoice.id %}"
                            class="btn btn-sm btn-info">
                             👁 عرض
                         </a>
 
-                        <!-- زر الاعتماد -->
                         {% if not invoice.is_approved %}
                             <a href="{% url 'approve_invoice' invoice.id %}"
                                class="btn btn-sm btn-success">
