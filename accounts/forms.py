@@ -30,6 +30,7 @@ class InvoiceForm(forms.ModelForm):
             'invoice_type',
             'customer_name',
             'invoice_date',
+            'currency'
     
         ]
 

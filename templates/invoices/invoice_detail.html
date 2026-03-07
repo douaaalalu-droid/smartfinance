@@ -1,98 +1,310 @@
 {% extends 'dashboard/base.html' %}
 {% load currency_filters %}
 
-{% block currency_selector %}
-<form method="get" action="{% url 'set_currency' %}" class="ms-3 d-flex align-items-center gap-2">
-    <input type="hidden" name="next" value="{{ request.get_full_path }}">
-
-    <select name="currency"
-            onchange="this.form.submit()"
-            class="form-select form-select-sm"
-            style="width:150px;">
-
-        <option value="old_syp"
-            {% if request.session.currency == 'old_syp' or not request.session.currency %}selected{% endif %}>
-            ل.س قديمة
-        </option>
-
-        <option value="new_syp"
-            {% if request.session.currency == 'new_syp' %}selected{% endif %}>
-            ل.س جديدة
-        </option>
-
-        <option value="usd"
-            {% if request.session.currency == 'usd' %}selected{% endif %}>
-            دولار
-        </option>
-    </select>
-
-    {% if request.session.currency == 'usd' %}
-        <input type="number"
-               step="0.0001"
-               name="exchange_rate"
-               class="form-control form-control-sm"
-               style="width:120px;"
-               value="{{ request.session.exchange_rate }}"
-               required>
-    {% endif %}
-</form>
-{% endblock %}
-
 {% block title %}عرض الفاتورة{% endblock %}
 
 {% block content %}
 
-<div class="card shadow">
-    <div class="card-header bg-primary text-white fw-bold">
-        🧾 بيانات الفاتورة
-    </div>
+<style>
 
-    <div class="card-body row">
-        <div class="col-md-3"><strong>رقم الفاتورة:</strong> {{ invoice.invoice_number }}</div>
-        <div class="col-md-3"><strong>النوع:</strong> {{ invoice.get_invoice_type_display }}</div>
-        <div class="col-md-3"><strong>التاريخ:</strong> {{ invoice.invoice_date }}</div>
-        <div class="col-md-3"><strong>العميل:</strong> {{ invoice.customer_name }}</div>
-    </div>
+.invoice-container{
+max-width:1000px;
+margin:auto;
+background:white;
+padding:40px;
+border-radius:10px;
+box-shadow:0 0 15px rgba(0,0,0,0.08);
+}
+
+.invoice-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:30px;
+}
+
+.company-box{
+font-size:22px;
+font-weight:bold;
+color:#2c3e50;
+}
+
+.invoice-title{
+font-size:32px;
+font-weight:bold;
+color:#34495e;
+}
+
+.invoice-info{
+background:#f8f9fa;
+padding:15px;
+border-radius:8px;
+margin-bottom:25px;
+}
+
+.total-box{
+background:#f1f5f9;
+padding:20px;
+border-radius:10px;
+margin-top:20px;
+}
+
+.total-main{
+font-size:22px;
+font-weight:bold;
+}
+
+.total-secondary{
+font-size:18px;
+color:#6c757d;
+}
+
+.table th{
+background:#eef2f7;
+}
+
+.print-btn{
+margin-bottom:15px;
+}
+
+@media print{
+
+body *{
+visibility:hidden;
+}
+
+.invoice-container,
+.invoice-container *{
+visibility:visible;
+}
+
+.invoice-container{
+position:absolute;
+left:0;
+top:0;
+width:100%;
+box-shadow:none;
+}
+
+.print-btn{
+display:none;
+}
+
+}
+
+</style>
+
+
+<div class="container-fluid">
+
+<div class="d-flex justify-content-between print-btn">
+
+<a href="{% url 'accountant_invoices' %}" class="btn btn-secondary">
+← رجوع
+</a>
+
+<button onclick="window.print()" class="btn btn-primary">
+🖨 طباعة الفاتورة
+</button>
+
 </div>
 
-<div class="card shadow mt-4">
-    <div class="card-header bg-dark text-white fw-bold">
-        📦 بنود الفاتورة
-    </div>
 
-    <div class="card-body">
-        <table class="table table-bordered text-center align-middle">
-            <thead class="table-secondary">
-                <tr>
-                    <th>#</th>
-                    <th>الوصف</th>
-                    <th>الكمية</th>
-                    <th>سعر الوحدة</th>
-                    <th>الإجمالي</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in items %}
-                <tr>
-                    <td>{{ forloop.counter }}</td>
-                    <td>{{ item.description }}</td>
-                    <td>{{ item.quantity }}</td>
-                    <td>{{ item.unit_price|currency_display:request }}</td>
-                    <td>{{ item.total_price|currency_display:request }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5">لا توجد بنود</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="invoice-container">
 
-        <div class="text-end fw-bold fs-5 mt-3">
-            💰 الإجمالي الكلي:
-            {{ invoice.total_amount|currency_display:request }}
-        </div>
-    </div>
+<div class="invoice-header">
+
+<div class="company-box">
+Smart Finance System
+</div>
+
+<div class="invoice-title">
+INVOICE
+</div>
+
+</div>
+
+
+<div class="invoice-info">
+
+<div class="row text-center">
+
+<div class="col-md-3">
+<strong>رقم الفاتورة</strong><br>
+{{ invoice.invoice_number }}
+</div>
+
+<div class="col-md-3">
+<strong>نوع الفاتورة</strong><br>
+{{ invoice.get_invoice_type_display }}
+</div>
+
+<div class="col-md-3">
+<strong>التاريخ</strong><br>
+{{ invoice.invoice_date|date:"Y-m-d" }}
+</div>
+
+<div class="col-md-3">
+<strong>العميل</strong><br>
+{{ invoice.customer_name }}
+</div>
+
+</div>
+
+<hr>
+
+<div class="row text-center">
+
+<div class="col-md-4">
+<strong>العملة</strong><br>
+{{ invoice.currency|upper }}
+</div>
+
+<div class="col-md-4">
+<strong>سعر الصرف</strong><br>
+{% if invoice.exchange_rate %}
+{{ invoice.exchange_rate|floatformat:2 }}
+{% else %}
+—
+{% endif %}
+</div>
+
+<div class="col-md-4">
+<strong>تاريخ سعر الصرف</strong><br>
+{{ invoice.invoice_date|date:"Y-m-d" }}
+</div>
+
+</div>
+
+</div>
+
+
+
+<table class="table table-bordered text-center align-middle">
+
+<thead>
+
+<tr>
+<th>#</th>
+<th>الوصف</th>
+<th>الكمية</th>
+<th>سعر الوحدة</th>
+<th>الإجمالي</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for item in items %}
+
+<tr>
+
+<td>{{ forloop.counter }}</td>
+
+<td>{{ item.description }}</td>
+
+<td>{{ item.quantity }}</td>
+
+<td>{{ item.unit_price|currency_display:request }}</td>
+
+<td>{{ item.total_price|currency_display:request }}</td>
+
+</tr>
+
+{% empty %}
+
+<tr>
+<td colspan="5">لا توجد بنود</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+
+<div class="total-box text-end">
+
+{% if invoice.currency == "usd" %}
+
+<div class="total-main">
+الإجمالي بالدولار :
+{{ invoice.total_amount|floatformat:2 }} $
+</div>
+
+{% if invoice.exchange_rate %}
+<div class="total-secondary">
+ما يعادله بالليرة السورية :
+{{ invoice.total_amount|mul:invoice.exchange_rate|floatformat:0 }} ل.س
+</div>
+{% endif %}
+
+{% else %}
+
+<div class="total-main">
+الإجمالي بالليرة السورية :
+{{ invoice.total_amount|floatformat:0 }} ل.س
+</div>
+
+{% if invoice.exchange_rate %}
+<div class="total-secondary">
+ما يعادله بالدولار :
+{{ invoice.total_amount|div:invoice.exchange_rate|floatformat:2 }} $
+</div>
+{% endif %}
+
+{% endif %}
+
+</div>
+
+
+
+{% if entries %}
+
+<hr>
+
+<h5 class="mt-4 mb-3">
+📘 القيود المحاسبية
+</h5>
+
+<table class="table table-bordered text-center">
+
+<thead>
+
+<tr>
+<th>الحساب</th>
+<th>مدين</th>
+<th>دائن</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+{% for entry in entries %}
+
+<tr>
+
+<td>{{ entry.account.name }}</td>
+
+<td>{{ entry.debit|floatformat:2 }}</td>
+
+<td>{{ entry.credit|floatformat:2 }}</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endif %}
+
+</div>
+
 </div>
 
 {% endblock %}

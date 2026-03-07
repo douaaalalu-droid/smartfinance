@@ -37,6 +37,7 @@ path('set-currency/', views.set_currency, name='set_currency'),
     path('accountant/invoices/', views.accountant_invoices, name='accountant_invoices'),
     path('invoice/<int:invoice_id>/', views.invoice_detail, name='invoice_detail'),
     path('invoice/<int:invoice_id>/approve/', views.approve_invoice, name='approve_invoice'),
+    
 
     path('general-ledger/', views.general_ledger, name='general_ledger'),
 

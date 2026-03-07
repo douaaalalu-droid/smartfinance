@@ -43,11 +43,14 @@ class AccountingPeriod(models.Model):
         return self.name
 
 
+
 class Invoice(models.Model):
+
     INVOICE_TYPES = (
         ('sale', 'فاتورة بيع'),
         ('purchase', 'فاتورة شراء'),
     )
+
     CURRENCY_CHOICES = (
         ('old_syp', 'ليرة قديمة'),
         ('new_syp', 'ليرة جديدة'),
@@ -55,22 +58,29 @@ class Invoice(models.Model):
     )
 
     invoice_number = models.CharField(max_length=50, unique=True)
-    invoice_type = models.CharField(max_length=10, choices=INVOICE_TYPES)
+
+    invoice_type = models.CharField(
+        max_length=10,
+        choices=INVOICE_TYPES
+    )
+
     customer_name = models.CharField(max_length=150)
+
     invoice_date = models.DateField()
 
     total_amount = models.DecimalField(
         max_digits=14,
         decimal_places=2,
-        default=0
+        default=0,
+        editable=False
     )
+
     currency = models.CharField(
         max_length=10,
         choices=CURRENCY_CHOICES,
         default='old_syp'
     )
 
-  
     original_total = models.DecimalField(
         max_digits=14,
         decimal_places=2,
@@ -78,28 +88,43 @@ class Invoice(models.Model):
         blank=True
     )
 
-    # سعر الصرف الذي استُخدم وقت إنشاء الفاتورة
-    applied_exchange_rate = models.DecimalField(
-        max_digits=15,
-        decimal_places=4,
-        null=True,
-        blank=True
-    )
 
-    
     exchange_rate = models.DecimalField(
-        max_digits=15,
+        max_digits=12,
         decimal_places=4,
         null=True,
         blank=True
+
+    )
+    original_currency = models.CharField(
+        max_length=10,
+        blank=True,
+        null=True
     )
 
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    original_amount = models.DecimalField(
+    max_digits=15,
+    decimal_places=2,
+    blank=True,
+    null=True
+)
+    exchange_rate_date = models.DateField(
+        null=True,
+        blank=True
+
+    )
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
+
     is_approved = models.BooleanField(default=False)
 
     period = models.ForeignKey(
-        AccountingPeriod,
+        "AccountingPeriod",
         on_delete=models.PROTECT,
         related_name="invoices",
         verbose_name="الفترة المحاسبية",
@@ -111,12 +136,13 @@ class Invoice(models.Model):
         return self.invoice_number
 
     def calculate_total(self):
-        total = Decimal('0.00')
+        total = Decimal("0.00")
         for item in self.items.all():
             total += item.total_price
         return total
 
     def clean(self):
+
         period = AccountingPeriod.objects.filter(
             start_date__lte=self.invoice_date,
             end_date__gte=self.invoice_date
@@ -131,14 +157,20 @@ class Invoice(models.Model):
         self.period = period
 
     def delete(self, *args, **kwargs):
+
         if self.is_approved:
-             raise ValidationError("لا يمكن حذف فاتورة معتمدة")
+            raise ValidationError("لا يمكن حذف فاتورة معتمدة")
+
         super().delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
-        self.full_clean() 
-        super().save(*args, **kwargs)
 
+        if not self.exchange_rate:
+            self.exchange_rate = Decimal("1.0000")
+
+        self.full_clean()
+
+        super().save(*args, **kwargs)
 
 class InvoiceItem(models.Model):
     invoice = models.ForeignKey(
@@ -155,19 +187,20 @@ class InvoiceItem(models.Model):
         editable=False,
         default=0
     )
-
     def save(self, *args, **kwargs):
-        if self.invoice.period and self.invoice.period.is_closed:
-            raise ValidationError(
-                "❌ لا يمكن إضافة بنود لفاتورة في فترة محاسبية مقفلة"
-            )
 
-        self.total_price = self.quantity * self.unit_price
-        super().save(*args, **kwargs)
+      if self.invoice.period and self.invoice.period.is_closed:
+        raise ValidationError(
+            "❌ لا يمكن إضافة بنود لفاتورة في فترة محاسبية مقفلة"
+        )
 
-        invoice = self.invoice
-        invoice.total_amount = invoice.calculate_total()
-        invoice.save(update_fields=['total_amount'])
+      self.total_price = self.quantity * self.unit_price
+
+      super().save(*args, **kwargs)
+
+      invoice = self.invoice
+      invoice.original_total = invoice.calculate_total()
+      invoice.save(update_fields=["original_total"])
 
 
 class ExchangeRate(models.Model):
@@ -244,6 +277,18 @@ class Account(models.Model):
 class JournalEntry(models.Model):
     date = models.DateField(verbose_name="تاريخ القيد")
     description = models.CharField(max_length=255)
+    currency = models.CharField(
+        max_length=10,
+        choices=Invoice.CURRENCY_CHOICES,
+        default='old_syp'
+    )
+
+    exchange_rate = models.DecimalField(
+        max_digits=15,
+        decimal_places=4,
+        null=True,
+        blank=True
+    )
 
     posted = models.BooleanField(default=False)
 
@@ -400,3 +445,26 @@ class JournalEntryLine(models.Model):
         self.full_clean()
         super().save(*args, **kwargs)
 
+
+class AccountingSettings(models.Model):
+
+    receivable_account = models.ForeignKey(
+        'Account',
+        on_delete=models.PROTECT,
+        related_name='receivable_account'
+    )
+
+    revenue_account = models.ForeignKey(
+        'Account',
+        on_delete=models.PROTECT,
+        related_name='revenue_account'
+    )
+
+    cash_account = models.ForeignKey(
+        'Account',
+        on_delete=models.PROTECT,
+        related_name='cash_account'
+    )
+
+    def __str__(self):
+        return "Accounting Settings"

@@ -3,6 +3,7 @@ from decimal import Decimal, InvalidOperation
 
 register = template.Library()
 
+
 @register.filter
 def currency_display(value, request):
 
@@ -20,7 +21,11 @@ def currency_display(value, request):
     # الدولار
     if currency == "usd":
         try:
+            if not exchange_rate:
+                return value
             rate = Decimal(exchange_rate)
+            if rate == 0:
+                return value
             return round(value / rate, 2)
         except (InvalidOperation, TypeError):
             return value
@@ -31,3 +36,25 @@ def currency_display(value, request):
 
     # الليرة القديمة
     return value
+
+
+@register.filter
+def div(value, arg):
+    try:
+        value = Decimal(value)
+        arg = Decimal(arg)
+        if arg == 0:
+            return 0
+        return value / arg
+    except:
+        return 0
+
+
+@register.filter
+def mul(value, arg):
+    try:
+        value = Decimal(value)
+        arg = Decimal(arg)
+        return value * arg
+    except:
+        return 0

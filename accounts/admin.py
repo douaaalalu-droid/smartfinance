@@ -7,6 +7,7 @@ from .models import Account
 from .models import AccountingPeriod
 from .services import close_accounting_period
 from django.contrib import messages
+from .models import AccountingSettings
 
 
 
@@ -15,6 +16,8 @@ from .models import ExchangeRate
 admin.site.register(ExchangeRate)
 
 
+
+admin.site.register(AccountingSettings)
 
 # المستخدم
 @admin.register(User)

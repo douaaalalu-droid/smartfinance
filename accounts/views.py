@@ -2,14 +2,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
-from django.db import transaction
 from .models import InvoiceItem
 from django.contrib import messages
 from django.db.models import Sum
 from decimal import Decimal
 from .models import User, Invoice, InvoiceItem, JournalEntry
 from .forms import JournalEntryForm, JournalEntryLineFormSet
-from accounts.forms import JournalEntryLine
+from .models import JournalEntryLine
 from .models import Account
 from django.contrib.auth.decorators import permission_required
 from accounts.decorators import role_required
@@ -26,6 +25,10 @@ from .forms import GroupForm
 from .models import AccountingPeriod
 from django.utils import timezone
 from accounts.models import ExchangeRate
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from .models import Invoice
+
 
 
 
@@ -458,10 +461,11 @@ def set_currency(request):
         request.session.modified = True
 
     return redirect(request.META.get("HTTP_REFERER", "/"))
-#  إنشاء فاتورة
+# إنشاء فاتورة
 @login_required
 @role_required('accountant', 'data_entry')
 def create_invoice(request):
+
     if "currency" not in request.session:
         request.session["currency"] = "old_syp"
 
@@ -476,55 +480,76 @@ def create_invoice(request):
 
             try:
                 with transaction.atomic():
+
                     invoice.created_by = request.user
-                    invoice.total_amount = 0
-                    invoice.save()  
+                    invoice.save()
 
                     formset = InvoiceItemFormSet(request.POST, instance=invoice)
 
                     if formset.is_valid():
                         items = formset.save(commit=False)
+
                         valid_items = [
                             item for item in items
                             if item and not getattr(item, 'DELETE', False)
                         ]
 
                         if not valid_items:
-                            invoice.delete() 
+                            invoice.delete()
                             messages.error(request, "❌ لا يمكن حفظ فاتورة بدون بنود")
-                            return render(request, 'invoices/create_invoice.html', {
+                            context = {
                                 'invoice_form': invoice_form,
-                                'formset': formset
-                            })
+                                'formset': formset,
+                                'hide_currency_selector': True
+                            }
+                            return render(request, 'invoices/create_invoice.html', context)
 
-                        total = 0
-                        for item in items:
+                        original_total = Decimal('0.00')
+
+                        for item in valid_items:
                             item.invoice = invoice
-
-                            #  التحويل حسب العملة المختارة
-                            currency = request.session.get("currency", "old_syp")
-
-                            if currency == "new_syp":
-                                item.unit_price = item.unit_price * 100
-                                item.total_price = item.total_price * 100
-
-                            elif currency == "usd":
-                                latest_rate = ExchangeRate.objects.filter(  currency='usd').order_by('-date').first()
-
-                                if not latest_rate:
-                                    raise ValidationError("❌ لا يوجد سعر صرف معرف")
-                                
-                                item.unit_price = item.unit_price * latest_rate.rate
-                                item.total_price = item.total_price * latest_rate.rate
-
-
-                           
-
                             item.save()
-                            total += item.total_price
+                            original_total += item.total_price
 
-                        invoice.total_amount = total
-                        invoice.save(update_fields=['total_amount'])
+                        invoice.original_total = original_total
+                        currency = request.session.get("currency", "old_syp")
+                        invoice.currency = currency
+                        invoice.original_currency = currency
+                        invoice.original_amount = original_total
+
+                        if currency == "old_syp":
+                            invoice.exchange_rate = Decimal('1')
+                            invoice.total_amount = original_total
+
+                        elif currency == "new_syp":
+                            invoice.exchange_rate = Decimal('100')
+                            invoice.total_amount = original_total * Decimal('100')
+
+                        elif currency == "usd":
+                            user_rate = request.POST.get("exchange_rate")
+
+                            if user_rate:
+                                invoice.exchange_rate = Decimal(user_rate)
+
+                            else:
+                                rate = ExchangeRate.objects.filter(
+                                    currency='usd',
+                                    date__lte=invoice.invoice_date
+                                ).order_by('-date').first()
+
+                                if not rate:
+                                    raise ValidationError("❌ لا يوجد سعر صرف معرف لهذا التاريخ")
+
+                                invoice.exchange_rate = rate.rate
+
+                            invoice.total_amount = original_total
+
+                        invoice.save(update_fields=[
+                            'original_total',
+                            'currency',
+                            'exchange_rate',
+                            'total_amount'
+                        ])
 
                         messages.success(request, "✅ تم حفظ الفاتورة بنجاح")
 
@@ -542,11 +567,13 @@ def create_invoice(request):
         else:
             messages.error(request, "❌ يوجد خطأ في بيانات الفاتورة")
 
-    return render(request, 'invoices/create_invoice.html', {
+    context = {
         'invoice_form': invoice_form,
-        'formset': formset
-    })
+        'formset': formset,
+        'hide_currency_selector': True
+    }
 
+    return render(request, 'invoices/create_invoice.html', context)
 
 #  قائمة الفواتير
 @login_required
@@ -571,15 +598,15 @@ def accountant_invoices(request):
 @login_required
 @role_required('accountant')
 def invoice_detail(request, invoice_id):
-    invoice = get_object_or_404(Invoice, id=invoice_id)
+    invoice = Invoice.objects.get(pk=invoice_id)
     items = invoice.items.all()
+    entries = JournalEntry.objects.filter(invoice=invoice)
 
-    return render(request, 'invoices/invoice_detail.html', {
-        'invoice': invoice,
-        'items': items
+    return render(request, "invoices/invoice_detail.html", {
+        "invoice": invoice,
+        "items": items,
+        "entries": entries
     })
-
-
 #  اعتماد فاتورة
 @login_required
 @role_required('accountant')
@@ -588,6 +615,9 @@ def approve_invoice(request, invoice_id):
 
     if invoice.is_approved:
         return redirect('invoice_detail', invoice.id)
+    if invoice.currency == "usd":
+     if not invoice.exchange_rate:
+        raise ValueError("يجب إدخال سعر الصرف قبل اعتماد الفاتورة")
     if invoice.period and invoice.period.is_closed:
         messages.error(
             request,
@@ -600,6 +630,7 @@ def approve_invoice(request, invoice_id):
 
       with transaction.atomic():
 
+
         #  إنشاء رأس القيد
         entry = JournalEntry.objects.create(
             date=invoice.invoice_date,
@@ -607,16 +638,18 @@ def approve_invoice(request, invoice_id):
             created_by=request.user,
             status='approved',
             invoice=invoice,
-            period=invoice.period
+            period=invoice.period,
+            currency=invoice.currency,
+            exchange_rate=invoice.exchange_rate
         )
 
-        #  جلب الحسابات
+        #  جلب الحسابات(هنا التعديل المطلوب التأكد منه )
         if invoice.invoice_type == 'sale':
-            debit_account = Account.objects.filter(account_type='asset').first()
-            credit_account = Account.objects.filter(account_type='revenue').first()
+            debit_account =  Account.objects.filter(code="6000").first()
+            credit_account =  Account.objects.filter(code="6000").first()
         else:
-            debit_account = Account.objects.filter(account_type='expense').first()
-            credit_account = Account.objects.filter(account_type='liability').first()
+            debit_account = Account.objects.filter(code="5000").first()
+            credit_account = Account.objects.filter(code="5000").first()
 
         #  تأكد أن الحسابات موجودة
         if not debit_account or not credit_account:
@@ -644,6 +677,8 @@ def approve_invoice(request, invoice_id):
     except ValidationError as e:
         messages.error(request, e.messages[0])
         return redirect('invoice_detail', invoice.id)
+    invoice.exchange_rate_date = timezone.now()
+    invoice.save()
 
     messages.success(request, "✅ تم اعتماد الفاتورة وإنشاء القيد المحاسبي بنجاح")
     return redirect('invoice_detail', invoice.id)
@@ -803,6 +838,57 @@ def admin_group_delete(request, group_id):
 
     return render(request, 'dashboard/admin/group_confirm_delete.html', {
         'group': group
+    })
+
+
+#تقرير المبيعات
+def sales_report(request):
+
+    sales = Invoice.objects.filter(
+        invoice_type="sale",
+        status="approved"
+    )
+
+    total_syp = sales.aggregate(Sum("total_amount"))
+
+    context = {
+        "sales": sales,
+        "total_syp": total_syp
+    }
+
+    return render(request, "reports/sales_report.html", context)
+#تقرير الأرباح 
+def profit_report(request):
+
+    sales = Invoice.objects.filter(invoice_type="sale").aggregate(Sum("total_amount"))
+
+    purchases = Invoice.objects.filter(invoice_type="purchase").aggregate(Sum("total_amount"))
+
+    profit = sales["total_amount__sum"] - purchases["total_amount__sum"]
+
+    return render(request,"reports/profit.html",{
+        "profit":profit
+    })
+
+#للتقرير
+@login_required
+@role_required('admin')
+def profit_report(request):
+
+    invoices = Invoice.objects.all()
+
+    total_usd = sum(
+        i.total_amount for i in invoices if i.currency == "usd"
+    )
+
+    total_syp = sum(
+        i.total_amount for i in invoices if i.currency != "usd"
+    )
+
+    return render(request,'reports/profit_report.html',{
+        "total_usd": total_usd,
+        "total_syp": total_syp,
+        "count": invoices.count()
     })
 
 #  تسجيل الخروج
