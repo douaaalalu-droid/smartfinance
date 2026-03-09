@@ -39,6 +39,20 @@ def currency_display(value, request):
 
 
 @register.filter
+def currency_symbol(request):
+
+    currency = request.session.get("currency", "old_syp")
+
+    if currency == "usd":
+        return "$"
+
+    if currency == "new_syp":
+        return "SYP"
+
+    return "SYP"
+
+
+@register.filter
 def div(value, arg):
     try:
         value = Decimal(value)

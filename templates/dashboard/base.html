@@ -1,209 +1,302 @@
+{% load currency_filters %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <title>{% block title %}Smart Finance{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<title>{% block title %}Smart Finance{% endblock %}</title>
 
-    <style>
-        html, body {
-            height: 100%;
-            width: 100%;
-            margin: 0;
-        }
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 
-        body {
-            background-color: #f4f6f9;
-            font-family: "Cairo", Tahoma, Arial;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
+<style>
 
-        .content {
-            flex: 1 0 auto;
-            padding: 25px;
-            width: 100%;
-        }
+html, body {
+height:100%;
+width:100%;
+margin:0;
+}
 
-        .content-inner {
-            width: 100%;
-            margin: 0 auto;
-        }
+body{
+background-color:#f4f6f9;
+font-family:"Cairo",Tahoma,Arial;
+display:flex;
+flex-direction:column;
+min-height:100vh;
+}
 
-        .navbar {
-            background: linear-gradient(90deg, #1f2937, #111827);
-        }
+.content{
+flex:1 0 auto;
+padding:25px;
+width:100%;
+}
 
-        .navbar-brand, .navbar-text, .nav-link {
-            color: #fff !important;
-        }
+.content-inner{
+width:100%;
+margin:0 auto;
+}
 
-        .navbar .btn {
-            margin-left: 0.5rem;
-            transition: all 0.2s ease-in-out;
-        }
+.navbar{
+background:linear-gradient(90deg,#1f2937,#111827);
+}
 
-        .navbar .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        }
+.navbar-brand,.navbar-text,.nav-link{
+color:#fff !important;
+}
 
-        .card {
-            border-radius: 6px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-        }
+.navbar .btn{
+margin-left:0.5rem;
+transition:all .2s ease-in-out;
+}
 
-        .card-header {
-            font-weight: bold;
-        }
+.navbar .btn:hover{
+transform:translateY(-2px);
+box-shadow:0 4px 8px rgba(0,0,0,.15);
+}
 
-        .table thead {
-            background-color: #f8f9fa;
-        }
+.card{
+border-radius:6px;
+box-shadow:0 2px 6px rgba(0,0,0,.05);
+}
 
-        .badge {
-            font-size: 0.85rem;
-        }
+.card-header{
+font-weight:bold;
+}
 
-        .alert {
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-        }
+.table thead{
+background-color:#f8f9fa;
+}
 
-        .navbar .user-info {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
+.badge{
+font-size:.85rem;
+}
 
-        .navbar .nav-buttons {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
+.alert{
+border-radius:8px;
+box-shadow:0 2px 6px rgba(0,0,0,.05);
+}
 
-        .back-btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 0.35rem 0.9rem;
-            font-size: 0.9rem;
-            border-radius: 6px;
-            border: 1px solid #0d6efd;
-            color: #0d6efd;
-            background-color: #fff;
-            transition: all 0.2s ease-in-out;
-        }
+.navbar .user-info{
+display:flex;
+align-items:center;
+gap:.75rem;
+}
 
-        .back-btn svg {
-            width: 16px;
-            height: 16px;
-        }
+.navbar .nav-buttons{
+display:flex;
+align-items:center;
+gap:.5rem;
+}
 
-        .back-btn:hover {
-            background-color: #0d6efd;
-            color: #fff;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-            text-decoration: none;
-        }
+.back-btn{
+display:flex;
+align-items:center;
+gap:8px;
+padding:.35rem .9rem;
+font-size:.9rem;
+border-radius:6px;
+border:1px solid #0d6efd;
+color:#0d6efd;
+background-color:#fff;
+transition:all .2s ease-in-out;
+}
 
-        .currency-select {
-            min-width: 170px;
-        }
-    </style>
+.back-btn svg{
+width:16px;
+height:16px;
+}
+
+.back-btn:hover{
+background-color:#0d6efd;
+color:#fff;
+transform:translateY(-2px);
+box-shadow:0 4px 8px rgba(0,0,0,.15);
+text-decoration:none;
+}
+
+.currency-select{
+min-width:170px;
+}
+
+.exchange-rate{
+width:120px;
+}
+
+</style>
 </head>
 
 <body>
 
 <nav class="navbar navbar-expand-lg shadow">
-    <div class="container-fluid">
 
-        <a class="navbar-brand fw-bold" href="#">💼 Smart Finance</a>
+<div class="container-fluid">
 
-        <div class="d-flex align-items-center gap-3 ms-auto">
+<a class="navbar-brand fw-bold" href="#">
+💼 Smart Finance
+</a>
 
-            <div class="user-info">
-                <span class="navbar-text">
-                    👤 {{ request.user.username }} |
-                    <strong>{{ request.user.get_role_display }}</strong>
-                </span>
-            </div>
+<div class="d-flex align-items-center gap-3 ms-auto">
 
-            {% block currency_selector %}
-                {% if not hide_currency_selector %}
-                <form method="post" action="{% url 'set_currency' %}" class="d-flex align-items-center">
-                    {% csrf_token %}
-                    <select name="currency" class="form-select form-select-sm currency-select"
-                            onchange="this.form.submit()">
-                        <option value="old_syp" {% if request.session.currency == "old_syp" %}selected{% endif %}>
-                            ليرة سورية (قديمة)
-                        </option>
-                        <option value="new_syp" {% if request.session.currency == "new_syp" %}selected{% endif %}>
-                            ليرة سورية (جديدة)
-                        </option>
-                        <option value="usd" {% if request.session.currency == "usd" %}selected{% endif %}>
-                            دولار
-                        </option>
-                    </select>
-                </form>
-                {% endif %}
-            {% endblock %}
+<div class="user-info">
+<span class="navbar-text">
+👤 {{ request.user.username }} |
+<strong>{{ request.user.get_role_display }}</strong>
+</span>
+</div>
 
-            <div class="nav-buttons">
-                {% if perms.accounts.view_general_ledger %}
-                    <a href="{% url 'general_ledger' %}" class="btn btn-sm btn-outline-light">
-                        📘 دفتر الأستاذ
-                    </a>
-                {% endif %}
+{% block currency_selector %}
+{% if not hide_currency_selector %}
 
-                {% if perms.accounts.view_trial_balance %}
-                    <a class="btn btn-sm btn-outline-light" href="{% url 'trial_balance' %}">
-                        📊 ميزان المراجعة
-                    </a>
-                {% endif %}
+<form method="post"
+action="{% url 'set_currency' %}"
+class="d-flex align-items-center gap-2">
 
-                <a href="{% url 'logout' %}" class="btn btn-sm btn-danger">
-                    🚪 تسجيل الخروج
-                </a>
+{% csrf_token %}
 
-                <button type="button"
-                        onclick="window.history.back();"
-                        class="back-btn btn-sm mt-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor"
-                         class="bi bi-arrow-left" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd"
-                              d="M15 8a.5.5 0 0 1-.5.5H2.707l4.147 4.146a.5.5 0 0 1-.708.708l-5-5a.5.5 0 0 1 0-.708l5-5a.5.5 0 1 1 .708.708L2.707 7.5H14.5A.5.5 0 0 1 15 8z"/>
-                    </svg>
-                    رجوع
-                </button>
-            </div>
+<select id="currency_select"
+name="currency"
+onchange="toggleExchange()"
+class="form-select form-select-sm currency-select">
 
-        </div>
-    </div>
+<option value="old_syp"
+{% if request.session.currency == "old_syp" %}selected{% endif %}>
+ليرة سورية قديمة
+</option>
+
+<option value="new_syp"
+{% if request.session.currency == "new_syp" %}selected{% endif %}>
+ليرة سورية جديدة
+</option>
+
+<option value="usd"
+{% if request.session.currency == "usd" %}selected{% endif %}>
+دولار
+</option>
+
+</select>
+
+<input type="number"
+step="0.01"
+name="exchange_rate"
+id="exchange_rate"
+class="form-control form-control-sm exchange-rate"
+placeholder="سعر الصرف"
+value="{{ request.session.exchange_rate }}"
+style="{% if request.session.currency != 'usd' %}display:none{% endif %};">
+
+<button type="submit"
+class="btn btn-sm btn-primary">
+تطبيق
+</button>
+
+</form>
+
+{% endif %}
+{% endblock %}
+
+<div class="nav-buttons">
+
+{% if perms.accounts.view_general_ledger %}
+<a href="{% url 'general_ledger' %}"
+class="btn btn-sm btn-outline-light">
+📘 دفتر الأستاذ
+</a>
+{% endif %}
+
+{% if perms.accounts.view_trial_balance %}
+<a class="btn btn-sm btn-outline-light"
+href="{% url 'trial_balance' %}">
+📊 ميزان المراجعة
+</a>
+{% endif %}
+
+<a href="{% url 'logout' %}"
+class="btn btn-sm btn-danger">
+🚪 تسجيل الخروج
+</a>
+
+<button type="button"
+onclick="window.history.back();"
+class="back-btn btn-sm mt-2">
+
+<svg xmlns="http://www.w3.org/2000/svg"
+fill="currentColor"
+class="bi bi-arrow-left"
+viewBox="0 0 16 16">
+
+<path fill-rule="evenodd"
+d="M15 8a.5.5 0 0 1-.5.5H2.707l4.147 4.146a.5.5 0 0 1-.708.708l-5-5a.5.5 0 0 1 0-.708l5-5a.5.5 0 1 1 .708.708L2.707 7.5H14.5A.5.5 0 0 1 15 8z"/>
+
+</svg>
+
+رجوع
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+
 </nav>
 
 <div class="content container-fluid">
-    <div class="content-inner">
 
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
-                    {{ message }}
-                    <button type="button" class="btn-close"
-                            data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
+<div class="content-inner">
 
-        {% block content %}{% endblock %}
+{% if messages %}
+{% for message in messages %}
 
-    </div>
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+
+{{ message }}
+
+<button type="button"
+class="btn-close"
+data-bs-dismiss="alert"></button>
+
+</div>
+
+{% endfor %}
+{% endif %}
+
+{% block content %}{% endblock %}
+
+</div>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+
+document.addEventListener("DOMContentLoaded",function(){
+
+let currencySelect=document.getElementById("currency_select");
+let exchangeInput=document.getElementById("exchange_rate");
+
+function toggleExchange(){
+
+if(currencySelect.value==="usd"){
+
+exchangeInput.style.display="block";
+
+}else{
+
+exchangeInput.style.display="none";
+exchangeInput.value="";
+
+}
+
+}
+
+toggleExchange();
+
+currencySelect.addEventListener("change",toggleExchange);
+
+});
+
+</script>
 
 </body>
 </html>

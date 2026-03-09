@@ -214,7 +214,7 @@ class ExchangeRate(models.Model):
     currency = models.CharField(
         max_length=10,
         choices=CURRENCY_CHOICES,
-        verbose_name='old_syp'
+        verbose_name='currency'
     )
 
     rate = models.DecimalField(
@@ -277,18 +277,7 @@ class Account(models.Model):
 class JournalEntry(models.Model):
     date = models.DateField(verbose_name="تاريخ القيد")
     description = models.CharField(max_length=255)
-    currency = models.CharField(
-        max_length=10,
-        choices=Invoice.CURRENCY_CHOICES,
-        default='old_syp'
-    )
 
-    exchange_rate = models.DecimalField(
-        max_digits=15,
-        decimal_places=4,
-        null=True,
-        blank=True
-    )
 
     posted = models.BooleanField(default=False)
 
@@ -308,10 +297,28 @@ class JournalEntry(models.Model):
         ('opening', 'قيد افتتاحي'),
     )
 
-    entry_type = models.CharField(
-        max_length=20,
-        choices=ENTRY_TYPES,
-        default='manual'
+    entry_type = models.CharField(max_length=20,choices=ENTRY_TYPES,default='manual')
+    currency = models.CharField(
+        max_length=10,
+        choices=[
+            ('old_syp', 'ليرة سورية قديمة'),
+            ('new_syp', 'ليرة سورية جديدة'),
+            ('usd', 'دولار'),
+        ],
+        default='old_syp'
+    )
+    exchnge_rate = models.DecimalField(
+        max_digits=20,
+        decimal_places=4,
+        null=True,
+        blank=True
+    )
+    original_amount=models.DecimalField(
+        max_digits=20,
+        decimal_places=2,
+        null=True,
+        blank=True
+
     )
 
     status = models.CharField(

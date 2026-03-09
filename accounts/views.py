@@ -287,13 +287,15 @@ def accountant_dashboard(request):
             entry.created_by = request.user
             entry.status = 'draft'
             currency = request.session.get("currency", "old_syp")
-
+            exchange_rate = request.session.get("exchange_rate")
+            
             if currency == "usd":
-                exchange_rate = request.POST.get("exchange_rate")
                 if not exchange_rate:
-                    messages.error(request, "❌ يجب إدخال سعر الصرف للدولار")
+                    messages.error(request, "❌  يجب إدخال سعر الصرف للدولار من القائمة")
                     return redirect('accountant_dashboard')
-                entry.exchange_rate = exchange_rate
+                
+                entry.exchange_rate = float(exchange_rate)
+            
             else:
                 entry.exchange_rate = None
  
@@ -302,22 +304,48 @@ def accountant_dashboard(request):
             formset = JournalEntryLineFormSet(request.POST, instance=entry)
 
             if formset.is_valid():
-                lines = formset.save(commit=False)
+            
 
                 #  منع حفظ قيد بدون حركات
-                valid_lines = [
-                    line for line in lines
-                    if line and not getattr(line, 'DELETE', False)
-                ]
+                valid_lines = []
+
+                for form in formset.forms:
+                    if  not form.cleaned_data:
+                        continue
+                    if form.cleaned_data.get("DELETE"):
+                        continue
+                    line = form.save(commit=False)
+
+                                   
+                        # تحويل المدين والدائن حسب العملة
+                    debit = Decimal(line.debit or 0)
+                    credit = Decimal(line.credit or 0)
+
+                    if debit == 0 and credit == 0:
+                            continue
+
+                    if currency =="usd" and exchange_rate:
+                            debit = debit * Decimal(exchange_rate)
+                            credit = credit *  Decimal(exchange_rate)
+
+                    elif currency== "new_syp":
+                        debit = debit * 100
+                        credit = credit * 100
+                    
+
+                        line.debit = debit
+                        line.credit = credit
+                        valid_lines.append(line)
 
                 if not valid_lines:
+
                     entry.delete()
                     messages.error(request, "❌ لا يمكن حفظ قيد بدون حركات")
                     return redirect('accountant_dashboard')
 
                 # حفظ الحركات
                 for line in valid_lines:
-                    line.entry = entry
+                    line.journal_entry = entry
                     line.save()
 
                 #  نجاح حفظ القيد 
@@ -373,13 +401,17 @@ def data_entry_dashboard(request):
             entry.created_by = request.user
             entry.status = 'draft'
             currency = request.session.get("currency", "old_syp")
+            exchange_rate = request.session.get("exchange_rate")
+
+            entry.currency = currency
 
             if currency == "usd":
-                exchange_rate = request.POST.get("exchange_rate")
                 if not exchange_rate:
-                    messages.error(request, "❌ يجب إدخال سعر الصرف للدولار")
-                    return redirect('accountant_dashboard')
-                entry.exchange_rate = exchange_rate
+                    messages.error(request, "❌ يجب إدخال سعر الصرف للدولار من القائمة")
+                    return redirect('data_entry_dashboard')
+                
+                entry.exchange_rate = Decimal(exchange_rate)
+
             else:
                 entry.exchange_rate = None
  
@@ -397,12 +429,36 @@ def data_entry_dashboard(request):
             formset = JournalEntryLineFormSet(request.POST, instance=entry)
 
             if formset.is_valid():
-                lines = formset.save(commit=False)
+            
 
-                valid_lines = [
-                    line for line in lines
-                    if line and not getattr(line, 'DELETE', False)
-                ]
+                valid_lines = []
+                for form in formset.forms:
+                    if  not form.cleaned_data:
+                        continue
+                    if form.cleaned_data.get("DELETE"):
+                     
+                        continue
+                    line = form.save(commit=False)
+                         # تحويل المدين والدائن حسب العملة
+                    debit = Decimal(line.debit or 0)
+                    credit = Decimal(line.credit or 0)
+
+                    if debit == 0 and credit == 0:
+                            continue
+
+                    if currency =="usd" and exchange_rate:
+                            debit = debit * Decimal(exchange_rate)
+                            credit = credit * Decimal(exchange_rate)
+
+                    elif currency== "new_syp":
+                        debit = debit * 100
+                        credit = credit * 100
+
+                        line.debit = debit
+                        line.credit = credit
+
+                        valid_lines.append(line)
+
 
                 if not valid_lines:
                     entry.delete()
@@ -411,7 +467,7 @@ def data_entry_dashboard(request):
 
                 
                 for line in valid_lines:
-                    line.entry = entry
+                    line.journal_entry = entry
                     line.save()
                     
                 messages.success(
@@ -444,21 +500,21 @@ def data_entry_dashboard(request):
         'formset': formset,
         'entries': entries
     })
-#لتغيير العملة 
-@login_required
-def set_currency(request):
-    currency = request.GET.get("currency")
-    exchange_rate = request.GET.get("exchange_rate")
 
-    if currency:
+#لتغيير العملة 
+def set_currency(request):
+
+    if request.method == "POST":
+
+        currency = request.POST.get("currency")
+        rate = request.POST.get("exchange_rate")
+
         request.session["currency"] = currency
 
-        if currency == "usd" and exchange_rate:
-            request.session["exchange_rate"] = exchange_rate
+        if currency == "usd" and rate:
+            request.session["exchange_rate"] = rate
         else:
             request.session["exchange_rate"] = None
-
-        request.session.modified = True
 
     return redirect(request.META.get("HTTP_REFERER", "/"))
 # إنشاء فاتورة
@@ -522,8 +578,8 @@ def create_invoice(request):
                             invoice.total_amount = original_total
 
                         elif currency == "new_syp":
-                            invoice.exchange_rate = Decimal('100')
-                            invoice.total_amount = original_total * Decimal('100')
+                            invoice.exchange_rate = Decimal('1')
+                            invoice.total_amount = original_total 
 
                         elif currency == "usd":
                             user_rate = request.POST.get("exchange_rate")
@@ -566,6 +622,8 @@ def create_invoice(request):
 
         else:
             messages.error(request, "❌ يوجد خطأ في بيانات الفاتورة")
+            if not invoice_form.is_valid():
+              print(invoice_form.errors)
 
     context = {
         'invoice_form': invoice_form,
@@ -643,13 +701,12 @@ def approve_invoice(request, invoice_id):
             exchange_rate=invoice.exchange_rate
         )
 
-        #  جلب الحسابات(هنا التعديل المطلوب التأكد منه )
         if invoice.invoice_type == 'sale':
-            debit_account =  Account.objects.filter(code="6000").first()
-            credit_account =  Account.objects.filter(code="6000").first()
+            debit_account =  Account.objects.filter(name="العملاء").first()
+            credit_account =  Account.objects.filter(name="إيرادات المبيعات").first()
         else:
-            debit_account = Account.objects.filter(code="5000").first()
-            credit_account = Account.objects.filter(code="5000").first()
+            debit_account = Account.objects.filter(name="المصروفات").first()
+            credit_account = Account.objects.filter(name="الموردون").first()
 
         #  تأكد أن الحسابات موجودة
         if not debit_account or not credit_account:
@@ -732,7 +789,7 @@ def general_ledger(request):
         )
 
         for line in lines:
-            running_balance += line.debit - line.credit
+            running_balance = running_balance + (line.debit - line.credit)
             line.running_balance = running_balance
 
     accounts = Account.objects.all()
@@ -846,7 +903,7 @@ def sales_report(request):
 
     sales = Invoice.objects.filter(
         invoice_type="sale",
-        status="approved"
+        is_approved=True
     )
 
     total_syp = sales.aggregate(Sum("total_amount"))
@@ -857,18 +914,7 @@ def sales_report(request):
     }
 
     return render(request, "reports/sales_report.html", context)
-#تقرير الأرباح 
-def profit_report(request):
 
-    sales = Invoice.objects.filter(invoice_type="sale").aggregate(Sum("total_amount"))
-
-    purchases = Invoice.objects.filter(invoice_type="purchase").aggregate(Sum("total_amount"))
-
-    profit = sales["total_amount__sum"] - purchases["total_amount__sum"]
-
-    return render(request,"reports/profit.html",{
-        "profit":profit
-    })
 
 #للتقرير
 @login_required
