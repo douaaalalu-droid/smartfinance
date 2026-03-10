@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='journalentry',
-            name='exchnge_rate',
+            name='exchange_rate',
             field=models.DecimalField(blank=True, decimal_places=4, max_digits=20, null=True),
         ),
         migrations.AlterField(

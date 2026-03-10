@@ -307,7 +307,7 @@ class JournalEntry(models.Model):
         ],
         default='old_syp'
     )
-    exchnge_rate = models.DecimalField(
+    exchange_rate = models.DecimalField(
         max_digits=20,
         decimal_places=4,
         null=True,
