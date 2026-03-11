@@ -304,8 +304,6 @@ def accountant_dashboard(request):
             formset = JournalEntryLineFormSet(request.POST, instance=entry)
 
             if formset.is_valid():
-            
-
                 #  منع حفظ قيد بدون حركات
                 valid_lines = []
 
@@ -318,11 +316,12 @@ def accountant_dashboard(request):
 
                                    
                         # تحويل المدين والدائن حسب العملة
-                    debit = Decimal(line.debit or 0)
-                    credit = Decimal(line.credit or 0)
-
+                    debit = Decimal(line.debit) if line.debit is not None else Decimal(0)
+                    credit = Decimal(line.credit) if line.credit is not None else Decimal(0)
                     if debit == 0 and credit == 0:
-                            continue
+                        messages.error(request, "❌ لا يمكن أن يكون الدائن والمدين صفر معًا")
+                        return redirect('accountant_dashboard')
+                            
 
                     if currency =="usd" and exchange_rate:
                             debit = debit * Decimal(exchange_rate)
@@ -331,11 +330,13 @@ def accountant_dashboard(request):
                     elif currency== "new_syp":
                         debit = debit * 100
                         credit = credit * 100
-                    
 
-                        line.debit = debit
-                        line.credit = credit
-                        valid_lines.append(line)
+                    elif currency == "old_syp":
+                        debit = debit
+                        credit = credit
+
+
+                    valid_lines.append(line)
 
                 if not valid_lines:
 
@@ -429,24 +430,24 @@ def data_entry_dashboard(request):
             formset = JournalEntryLineFormSet(request.POST, instance=entry)
 
             if formset.is_valid():
-            
-
                 valid_lines = []
                 for form in formset.forms:
                     if  not form.cleaned_data:
                         continue
                     if form.cleaned_data.get("DELETE"):
-                     
                         continue
+
                     line = form.save(commit=False)
                          # تحويل المدين والدائن حسب العملة
-                    debit = Decimal(line.debit or 0)
-                    credit = Decimal(line.credit or 0)
+                    debit = Decimal(line.debit) if line.debit is not None else Decimal(0)
+                    credit = Decimal(line.credit) if line.credit is not None else Decimal(0)
 
                     if debit == 0 and credit == 0:
-                            continue
+                            messages.error(request, "❌ لا يمكن أن يكون الدائن والمدين صفر معًا")
+                            return redirect('accountant_dashboard')
+                            
 
-                    if currency =="usd" and exchange_rate:
+                    elif currency =="usd" and exchange_rate:
                             debit = debit * Decimal(exchange_rate)
                             credit = credit * Decimal(exchange_rate)
 
@@ -454,10 +455,14 @@ def data_entry_dashboard(request):
                         debit = debit * 100
                         credit = credit * 100
 
-                        line.debit = debit
-                        line.credit = credit
+                    elif currency == "old_syp":
 
-                        valid_lines.append(line)
+
+                        line.debit =debit
+                        line.credit =credit
+
+
+                    valid_lines.append(line)
 
 
                 if not valid_lines:
