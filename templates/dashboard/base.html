@@ -152,6 +152,7 @@ class="d-flex align-items-center gap-2">
 
 {% csrf_token %}
 
+{% if user.role != "admin"%}
 <select id="currency_select"
 name="currency"
 onchange="toggleExchange()"
@@ -189,6 +190,7 @@ class="btn btn-sm btn-primary">
 </button>
 
 </form>
+{% endif%}
 
 {% endif %}
 {% endblock %}
