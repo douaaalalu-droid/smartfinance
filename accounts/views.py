@@ -335,7 +335,8 @@ def accountant_dashboard(request):
                         debit = debit
                         credit = credit
 
-
+                    line.debit = debit
+                    line.credit = credit
                     valid_lines.append(line)
 
                 if not valid_lines:

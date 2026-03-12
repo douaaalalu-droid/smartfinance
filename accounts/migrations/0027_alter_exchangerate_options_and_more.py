@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='exchangerate',
             name='currency',
-            field=models.CharField(choices=[('old_syp', 'ليرة قديمة'), ('new_syp', 'ليرة جديدة'), ('usd', 'دولار')], default=django.utils.timezone.now, max_length=10, verbose_name='old_syp'),
+            field=models.CharField(choices=[('old_syp', 'ليرة قديمة'), ('new_syp', 'ليرة جديدة'), ('usd', 'دولار')], default='old_syp', max_length=10, verbose_name='old_syp'),
             preserve_default=False,
         ),
         migrations.AddField(
