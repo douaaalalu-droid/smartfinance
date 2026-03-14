@@ -457,12 +457,11 @@ def data_entry_dashboard(request):
                         credit = credit * 100
 
                     elif currency == "old_syp":
-
-
-                        line.debit =debit
-                        line.credit =credit
-
-
+                         debit = debit
+                         credit = credit 
+                        
+                    line.debit = debit
+                    line.credit =credit
                     valid_lines.append(line)
 
 
