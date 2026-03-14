@@ -3,9 +3,11 @@
 
 {% block currency_selector %}
 
-<form method="get" action="{% url 'set_currency' %}" class="ms-3 d-flex align-items-center gap-2">
+<form method="post" action="{% url 'set_currency' %}" class="ms-3 d-flex align-items-center gap-2">
+    {% csrf_token %}
 
 <select name="currency"
+id="currency_select"
 onchange="this.form.submit()"
 class="form-select form-select-sm"
 style="width:150px;">
@@ -36,6 +38,7 @@ class="form-control form-control-sm"
 style="width:120px;"
 placeholder="سعر الصرف"
 value="{{ request.session.exchange_rate }}"
+id="exchange_rate"
 required>
 
 {% endif %}

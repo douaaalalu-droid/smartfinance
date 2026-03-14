@@ -9,17 +9,17 @@ from django.contrib.auth import get_user_model
 
 
 class InvoiceForm(forms.ModelForm):
-    invoice_date = forms.DateField(
-        widget=forms.DateInput(
+    invoice_date = forms.DateTimeField(
+        widget=forms.DateTimeInput(
             attrs={
-                'type': 'date',
+                'type': 'datetime-local',
                 'class': 'form-control'
             },
-            format='%Y-%m-%d'
+            format='%Y-%m-%dT%H:%M'
         ),
-        input_formats=['%Y-%m-%d'],
+        input_formats=['%Y-%m-%dT%H:%M'],
         error_messages={
-            'invalid': '❌ الرجاء إدخال تاريخ صحيح بالصيغة YYYY-MM-DD'
+            'invalid': '❌ الرجاء إدخال تاريخ ووقت صحيح'
         }
     )
 

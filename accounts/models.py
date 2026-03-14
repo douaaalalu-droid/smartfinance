@@ -66,7 +66,7 @@ class Invoice(models.Model):
 
     customer_name = models.CharField(max_length=150)
 
-    invoice_date = models.DateField()
+    invoice_date = models.DateTimeField()
 
     total_amount = models.DecimalField(
         max_digits=14,
