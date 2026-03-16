@@ -3,6 +3,7 @@ from . import views
 from .views import accounting_period_list
 
 urlpatterns = [
+    path('get_ai_report/', views.get_ai_report, name='get_ai_report'),
     path('', views.login_view, name='login'),
 
 

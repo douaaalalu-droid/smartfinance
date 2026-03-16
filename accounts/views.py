@@ -1,7 +1,10 @@
+import re
+from urllib import response
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from .models import InvoiceItem
 from django.contrib import messages
 from django.db.models import Sum
@@ -29,9 +32,23 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 from .models import Invoice
 
+from django.db import connection
+from google import genai
+from google.genai import types
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
+# مفتاح Gemini API
+GEMINI_API_KEY = os.environ['GEMINI_API_KEY']
 
+if not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY environment variable not set.")
+
+# إنشاء العميل
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 User = get_user_model()
 
@@ -947,3 +964,176 @@ def profit_report(request):
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+
+def get_ai_report(request):
+    """
+    Endpoint لإرجاع البيانات المالية المهمة بصيغة تحليلية احترافية (plain text)
+    جاهزة لإدخالها في نموذج ذكاء اصطناعي
+    """
+
+    report_text = ""
+
+    with connection.cursor() as cursor:
+
+        # ========================
+        # الفواتير - تحليل احترافي
+        # ========================
+        cursor.execute("""
+        SELECT
+            i.invoice_number,
+            i.customer_name,
+            i.invoice_date,
+            i.total_amount,
+            ii.description AS item_description,
+            ii.quantity,
+            ii.unit_price,
+            ii.total_price,
+            i.is_approved,
+            i.currency,
+            i.exchange_rate
+        FROM accounts_invoice i
+        JOIN accounts_invoiceitem ii
+            ON i.id = ii.invoice_id
+        """)
+        invoices = cursor.fetchall()
+
+        report_text += "تقرير الفواتير (تحليل احترافي):\n"
+        report_text += "===============================\n"
+
+        # تجميع الفواتير حسب رقم الفاتورة
+        invoice_summary = {}
+        for row in invoices:
+            invoice_number, customer_name, invoice_date, total_amount, item_desc, qty, unit_price, total_price, is_approved, currency, exchange_rate = row
+            if invoice_number not in invoice_summary:
+                invoice_summary[invoice_number] = {
+                    "customer": customer_name,
+                    "date": str(invoice_date),
+                    "total": total_amount,
+                    "currency": currency,
+                    "exchange_rate": exchange_rate,
+                    "approved": is_approved,
+                    "items": []
+                }
+            invoice_summary[invoice_number]["items"].append(f"{item_desc} (الكمية: {qty}, سعر الوحدة: {unit_price}, الإجمالي: {total_price})")
+
+        for inv_num, info in invoice_summary.items():
+            report_text += f"- فاتورة رقم {inv_num} للعميل {info['customer']} بتاريخ {info['date']}, إجمالي المبلغ: {info['total']} {info['currency']}"
+            if info['currency'] != "USD" and info['exchange_rate']:
+                report_text += f" (سعر الصرف: {info['exchange_rate']})"
+            report_text += f", حالة الاعتماد: {'معتمدة' if info['approved'] else 'غير معتمدة'}.\n"
+            report_text += "  البنود: " + "; ".join(info["items"]) + ".\n"
+
+        # ========================
+        # القيود المحاسبية - تحليل احترافي
+        # ========================
+        cursor.execute("""
+        SELECT
+            je.id AS entry_id,
+            je.date,
+            je.description,
+            a.code AS account_code,
+            a.name AS account_name,
+            a.account_type,
+            jl.debit,
+            jl.credit,
+            je.posted
+        FROM accounts_journalentry je
+        JOIN accounts_journalentryline jl
+            ON je.id = jl.journal_entry_id
+        JOIN accounts_account a
+            ON jl.account_id = a.id
+        """)
+        entries = cursor.fetchall()
+
+        report_text += "\nتقرير القيود المحاسبية (تحليل احترافي):\n"
+        report_text += "=====================================\n"
+
+        # تجميع القيود حسب رقم القيد
+        entry_summary = {}
+        for row in entries:
+            entry_id, date, desc, acc_code, acc_name, acc_type, debit, credit, posted = row
+            if entry_id not in entry_summary:
+                entry_summary[entry_id] = {
+                    "date": str(date),
+                    "description": desc,
+                    "posted": posted,
+                    "accounts": []
+                }
+            entry_summary[entry_id]["accounts"].append({
+                "code": acc_code,
+                "name": acc_name,
+                "type": acc_type,
+                "debit": debit,
+                "credit": credit
+            })
+
+        for eid, info in entry_summary.items():
+            report_text += f"- القيد رقم {eid} بتاريخ {info['date']}, {'معتمد' if info['posted'] else 'غير معتمد'}.\n"
+            report_text += f"  وصف القيد: {info['description']}\n"
+            for acc in info["accounts"]:
+                report_text += f"    الحساب: {acc['code']} - {acc['name']} ({acc['type']}), مدين: {acc['debit']}, دائن: {acc['credit']}\n"
+
+        # ========================
+        # دفتر الأستاذ - تحليل احترافي
+        # ========================
+        cursor.execute("""
+        SELECT
+            a.code,
+            a.name,
+            a.account_type,
+            SUM(jl.debit) AS total_debit,
+            SUM(jl.credit) AS total_credit,
+            SUM(jl.debit - jl.credit) AS balance
+        FROM accounts_account a
+        LEFT JOIN accounts_journalentryline jl
+            ON a.id = jl.account_id
+        GROUP BY a.code, a.name, a.account_type
+        """)
+        ledger = cursor.fetchall()
+
+        report_text += "\nتقرير دفتر الأستاذ (ملخص الحسابات):\n"
+        report_text += "==================================\n"
+        for code, name, acc_type, debit, credit, balance in ledger:
+            report_text += f"- الحساب {code} - {name} ({acc_type}): إجمالي المدين = {debit}, إجمالي الدائن = {credit}, الرصيد = {balance}\n"
+
+        # ========================
+        # ميزان المراجعة - تحليل احترافي
+        # ========================
+        cursor.execute("""
+        SELECT
+            a.code,
+            a.name,
+            SUM(jl.debit) AS debit,
+            SUM(jl.credit) AS credit
+        FROM accounts_account a
+        LEFT JOIN accounts_journalentryline jl
+            ON a.id = jl.account_id
+        GROUP BY a.code, a.name
+        ORDER BY a.code
+        """)
+        trial_balance = cursor.fetchall()
+
+        report_text += "\nتقرير ميزان المراجعة:\n"
+        report_text += "======================\n"
+        for code, name, debit, credit in trial_balance:
+            report_text += f"- الحساب {code} - {name}: مدين = {debit}, دائن = {credit}\n"
+
+    user_prompt = " هذه البيانات مأخوذة من نظام محاسبي وتتضمن معلومات دقيقة عن القيود المحاسبية الفواتير دفتر الأستاذ وميزان المراجعة الهدف من التحليل هو إعداد تقرير مالي احترافي للإدارة ملخص مالي Financial Summary إجمالي قيمة القيود المحاسبية للفترة محل الدراسة و إجمالي قيمة الفواتير مع توزيعها حسب العملاء والعملة وتلخيص حركة الحسابات في دفتر الأستاذ إجمالي المدين إجمالي الدائن والأرصدة لكل حساب ميزان المراجعة مقارنة المدين والدائن لضمان التوازن المالي و تنبيهات النظام فواتير غير مرتبطة بأي قيد محاسبي قيود غير معتمدة مرتبطة بفواتير فواتير بقيم أعلى من ضعف متوسط العميل اختلاف العملة بين الفاتورة والقيد قيود أو فواتير تحتوي على بيانات ناقصة أو غير مكتملة توليد تنبيهات آلية وتحديد الحالات الاستثنائية مما يقلل المخاطر المالية ويساعد الإدارة على اتخاذ القرارات و تحسين العمليات المالية تحليل البيانات تلقائيا لاكتشاف الأخطاء أو الشوائب مثل الفواتير المكررة المفقودة أو غير المعتمدة توصيات للإدارة باستخدام الخوارزميات التالية على البيانات : خوارزمية خوارزمية Convolution اكتشاف الاتجاهات الموسمية (مثل زيادة المبيعات في شهر محدد كل عام) اكتشاف التغيرات المفاجئة أو القفزات في المصروفات أو الإيرادات، لتساعد الإدارة على معرفة الفترات الزمنية التي تحدث فيها تغيرات كبيرة، و تكشف عن المصروفات غير الطبيعية أو الفواتير الكبيرة المفاجئة وخوارزمية Prophetللتنبؤ بالمصروفات المتوقعة لتعطي للإدارة توقعات دقيقة للتدفق النقدي والايرادات وأيضا خوارزمية Anomaly Detection ( Z-Score ) لاكتشاف الفواتير أو القيود أو المصروفات غير الطبيعية أو الشاذة ويقلل من المخاطر المالية ويكشف عن احتمالية وجود أخطاء اعطني التقرير دون اظهار الخوارزميات المستخدمة ويكون التقرير منسق ومرتب ومفهوم"
+    full_prompt = user_prompt + report_text + "أريد أن يكون التقرير هو نص HTML فقط فيه تنسيق كافي لعرض البيانات والجداول بشكل أنيق شبيه بتنسق ملفات ال word وملفات ال pdf لا تضيف في البداية ```html وقم بوضع dir='rtl' وأيضًا lang='ar'"
+    response = client.models.generate_content(
+        model="gemma-3-27b-it",
+        contents=full_prompt,
+        config=types.GenerateContentConfig(
+            response_modalities=["TEXT"]
+        )
+    )
+
+    output_text = ""
+    for part in response.parts:
+        if part.text:
+            output_text += part.text
+
+    output_text = re.sub(r'^```html\s*|\s*```$', '', output_text.strip())
+
+    return HttpResponse(output_text, content_type="text/html; charset=utf-8")
