@@ -1126,3 +1126,44 @@ def get_ai_report_risks(request):
     output = "".join([p.text for p in response.parts if p.text])
 
     return HttpResponse(output, content_type="text/html; charset=utf-8")
+
+
+#تقرير مخصص
+def ai_report_custom(request):
+    if request.method == "POST":
+        user_prompt = request.POST.get("prompt")
+
+        if not user_prompt:
+            return render(request, 'ai_reports/custom_form.html', {
+                'error': 'الرجاء إدخال نص التحليل'
+            })
+
+        report_text = generate_report_text(request)
+
+        full_prompt = f"""
+        أنت محلل مالي محترف.
+
+        طلب المستخدم:
+        {user_prompt}
+
+        البيانات:
+        {report_text}
+
+        المطلوب:
+        إنشاء تقرير احترافي بصيغة HTML فقط
+        بدون ```html
+        يحتوي تنسيق جميل
+        dir='rtl'
+        lang='ar'
+        """
+
+        response = client.models.generate_content(
+            model="gemma-3-27b-it",
+            contents=full_prompt,
+        )
+
+        output = "".join([p.text for p in response.parts if p.text])
+
+        return HttpResponse(output, content_type="text/html; charset=utf-8")
+
+    return render(request, 'ai_reports/custom_form.html')

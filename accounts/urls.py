@@ -8,6 +8,7 @@ urlpatterns = [
     path('ai-report/customers/', views.get_ai_report_customers, name='ai_report_customers'),
     path('ai-report/risks/', views.get_ai_report_risks, name='ai_report_risks'),
     path('ai-report/summary/', views.get_ai_report_summary, name='ai_report_summary'),
+    path('ai-report/custom/', views.ai_report_custom, name='ai_report_custom'),
     
 
 
