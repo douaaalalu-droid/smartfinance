@@ -31,7 +31,6 @@ from accounts.models import ExchangeRate
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from .models import Invoice
-
 from django.db import connection
 from google import genai
 from google.genai import types
@@ -256,38 +255,30 @@ def accounting_period_list(request):
 
 
 #  لوحة المدير المالي
+from django.shortcuts import render
+from django.db.models import Sum
+from django.contrib.auth.decorators import login_required
+from accounts.models import Invoice, JournalEntry
+
 @login_required
-@role_required('manager')
 def manager_dashboard(request):
-
-    income = (
-        JournalEntryLine.objects
-        .filter(
-            account__account_type='revenue',
-            journal_entry__status='approved'
-        )
-        .aggregate(total=Sum('credit'))['total'] or 0
+    latest_invoices = Invoice.objects.order_by('-invoice_date')[:5]
+    total_invoices = Invoice.objects.aggregate(total=Sum('total_amount'))['total'] or 0
+    total_journal_entries = JournalEntry.objects.count()
+    top_customers_query = (
+        Invoice.objects
+        .values('customer_name')
+        .annotate(total_revenue=Sum('total_amount'))
+        .order_by('-total_revenue')[:3]
     )
-
-    expense = (
-        JournalEntryLine.objects
-        .filter(
-            account__account_type='expense',
-            journal_entry__status='approved'
-        )
-        .aggregate(total=Sum('debit'))['total'] or 0
-    )
-
-
-    profit = income - expense
-
+    top_customers = ", ".join([f"{c['customer_name']} ({c['total_revenue']})" for c in top_customers_query]) or "-"
     context = {
-        'income': income,
-        'expense': expense,
-        'profit': profit,
+        "latest_invoices": latest_invoices,
+        "total_invoices": total_invoices,
+        "total_journal_entries": total_journal_entries,
+        "top_customers": top_customers,
     }
-
-    return render(request, 'dashboard/manager.html', context)
+    return render(request, "dashboard/manager.html", context)
 
 #لوحة المحاسب
 @login_required
@@ -920,53 +911,14 @@ def admin_group_delete(request, group_id):
     })
 
 
-#تقرير المبيعات
-def sales_report(request):
-
-    sales = Invoice.objects.filter(
-        invoice_type="sale",
-        is_approved=True
-    )
-
-    total_syp = sales.aggregate(Sum("total_amount"))
-
-    context = {
-        "sales": sales,
-        "total_syp": total_syp
-    }
-
-    return render(request, "reports/sales_report.html", context)
-
-
-#للتقرير
-@login_required
-@role_required('admin')
-def profit_report(request):
-
-    invoices = Invoice.objects.all()
-
-    total_usd = sum(
-        i.total_amount for i in invoices if i.currency == "usd"
-    )
-
-    total_syp = sum(
-        i.total_amount for i in invoices if i.currency != "usd"
-    )
-
-    return render(request,'reports/profit_report.html',{
-        "total_usd": total_usd,
-        "total_syp": total_syp,
-        "count": invoices.count()
-    })
-
 #  تسجيل الخروج
 @login_required
 def logout_view(request):
     logout(request)
     return redirect('login')
 
-
-def get_ai_report(request):
+#تابع مشترك لجلب البيانات
+def generate_report_text(request):
     """
     Endpoint لإرجاع البيانات المالية المهمة بصيغة تحليلية احترافية (plain text)
     جاهزة لإدخالها في نموذج ذكاء اصطناعي
@@ -1118,9 +1070,12 @@ def get_ai_report(request):
         report_text += "======================\n"
         for code, name, debit, credit in trial_balance:
             report_text += f"- الحساب {code} - {name}: مدين = {debit}, دائن = {credit}\n"
-
-    user_prompt = " هذه البيانات مأخوذة من نظام محاسبي وتتضمن معلومات دقيقة عن القيود المحاسبية الفواتير دفتر الأستاذ وميزان المراجعة الهدف من التحليل هو إعداد تقرير مالي احترافي للإدارة ملخص مالي Financial Summary إجمالي قيمة القيود المحاسبية للفترة محل الدراسة و إجمالي قيمة الفواتير مع توزيعها حسب العملاء والعملة وتلخيص حركة الحسابات في دفتر الأستاذ إجمالي المدين إجمالي الدائن والأرصدة لكل حساب ميزان المراجعة مقارنة المدين والدائن لضمان التوازن المالي و تنبيهات النظام فواتير غير مرتبطة بأي قيد محاسبي قيود غير معتمدة مرتبطة بفواتير فواتير بقيم أعلى من ضعف متوسط العميل اختلاف العملة بين الفاتورة والقيد قيود أو فواتير تحتوي على بيانات ناقصة أو غير مكتملة توليد تنبيهات آلية وتحديد الحالات الاستثنائية مما يقلل المخاطر المالية ويساعد الإدارة على اتخاذ القرارات و تحسين العمليات المالية تحليل البيانات تلقائيا لاكتشاف الأخطاء أو الشوائب مثل الفواتير المكررة المفقودة أو غير المعتمدة توصيات للإدارة باستخدام الخوارزميات التالية على البيانات : خوارزمية خوارزمية Convolution اكتشاف الاتجاهات الموسمية (مثل زيادة المبيعات في شهر محدد كل عام) اكتشاف التغيرات المفاجئة أو القفزات في المصروفات أو الإيرادات، لتساعد الإدارة على معرفة الفترات الزمنية التي تحدث فيها تغيرات كبيرة، و تكشف عن المصروفات غير الطبيعية أو الفواتير الكبيرة المفاجئة وخوارزمية Prophetللتنبؤ بالمصروفات المتوقعة لتعطي للإدارة توقعات دقيقة للتدفق النقدي والايرادات وأيضا خوارزمية Anomaly Detection ( Z-Score ) لاكتشاف الفواتير أو القيود أو المصروفات غير الطبيعية أو الشاذة ويقلل من المخاطر المالية ويكشف عن احتمالية وجود أخطاء اعطني التقرير دون اظهار الخوارزميات المستخدمة ويكون التقرير منسق ومرتب ومفهوم"
-    full_prompt = user_prompt + report_text + "أريد أن يكون التقرير هو نص HTML فقط فيه تنسيق كافي لعرض البيانات والجداول بشكل أنيق شبيه بتنسق ملفات ال word وملفات ال pdf لا تضيف في البداية ```html وقم بوضع dir='rtl' وأيضًا lang='ar'"
+            return report_text
+#تقرير شامل         
+def get_ai_report_summary(request):
+    report_text = generate_report_text(request)
+    user_prompt ="هذه البيانات مأخوذة من نظام محاسبي وتشمل القيود المحاسبية والفواتير ودفتر الأستاذ وميزان المراجعة. الهدف هو إعداد تقرير مالي احترافي مختصر موجه للإدارة يدعم اتخاذ القرار. ابدأ بـ ملخص تنفيذي ذكي يتضمن: إجمالي الفواتير، إجمالي القيود، وأبرز الأرصدة، مع أهم الملاحظات والمخاطر والفرص. يتضمن التقرير: ملخص مالي: إجمالي القيود والفواتير مع توزيع مختصر حسب العملاء والعملات وتحليل مختصر لدفتر الأستاذ (إجمالي المدين والدائن والنتيجة العامة) وتحليل ميزان المراجعة مع نتيجة مختصرة دون عرض الميزان وتحليل الأداء كتحديد اتجاه الإيرادات والمصروفات (نمو، انخفاض، استقرار) وأهم الحسابات المؤثرة، مع كشف الأرصدة غير الطبيعية يتضمن كشف التنبيهات: فواتير بدون قيود، قيود غير معتمدة، فواتير مرتفعة مقارنة بمتوسط العميل، اختلاف العملة قم باستخراج أهم الأنماط والتغيرات المالية، مع عرض التنبيهات حسب الأولوية. أضف قائمة مختصرة بأهم الملاحظات، ثم قدم توصيات واضحة ومختصرة تهدف إلى تحسين الربحية، تقليل المصاريف، وتعزيز الرقابة المالية. يجب أن يكون التقرير منسق، واضح، مختصر، وجاهز للإدارة دون ذكر أي تفاصيل تقنية"
+    full_prompt = report_text + user_prompt + "أريد أن يكون التقرير هو نص HTML فقط فيه تنسيق كافي لعرض البيانات والجداول بشكل أنيق شبيه بتنسق ملفات ال word وملفات ال pdf لا تضيف في البداية ```html وقم بوضع dir='rtl' وأيضًا lang='ar'"
     response = client.models.generate_content(
         model="gemma-3-27b-it",
         contents=full_prompt,
@@ -1137,3 +1092,37 @@ def get_ai_report(request):
     output_text = re.sub(r'^```html\s*|\s*```$', '', output_text.strip())
 
     return HttpResponse(output_text, content_type="text/html; charset=utf-8")
+
+
+
+ #تقرير العملاء      
+def get_ai_report_customers(request):
+    report_text = generate_report_text(request)
+    user_prompt ="هذه البيانات مأخوذة من نظام محاسبي وتشمل الفواتير والقيود المحاسبية المرتبطة بالعملاء الهدف هو إعداد تقرير احترافي مختصر لتحليل العملاء يدعم الإدارة في اتخاذ قرارات فعالة ابدأ بملخص تنفيذي ذكي يتضمن أعلى العملاء مساهمة في الإيرادات ونسبة تركّز الإيرادات هل تعتمد الشركة على عدد محدود من العملاء ويتضمن التقرير تصنيف العملاء إلى عملاء رئيسيين متوسطين منخفضي النشاط بناء على تحليل الفواتير وتحليل تكرار التعامل عملاء دائمون مقابل عملاء عرضيين وتحليل متوسط قيمة الفاتورة لكل عميل تحديد العملاء غير النشطين أو المتوقفين واستخراج أهم الأنماط في سلوك العملاء والتغيرات في مساهمة العملاء بمرور الوقت وقائمة مختصرة بأهم الملاحظات وتوصيات واضحة لزيادة الإيرادات من العملاء الحاليين واستخدم الخوارزميات الصحيحة ويجب أن يكون التقرير مختصر واضح إداري وخالي من التفاصيل التقنية والخوارزميات المستخدمة"
+    full_prompt = report_text + user_prompt + "أريد أن يكون التقرير هو نص HTML فقط فيه تنسيق كافي لعرض البيانات والجداول بشكل أنيق شبيه بتنسق ملفات ال word وملفات ال pdf لا تضيف في البداية ```html وقم بوضع dir='rtl' وأيضًا lang='ar'"
+    response = client.models.generate_content(
+        model="gemma-3-27b-it",
+        contents=full_prompt,
+
+    )
+
+    output =  "".join([p.text for p in response.parts if p.text])
+
+    return HttpResponse(output, content_type="text/html; charset=utf-8")
+
+
+
+
+#كشف المخاطر والتنبيهات المالية     
+def get_ai_report_risks(request):
+    report_text = generate_report_text(request)
+    user_prompt ="""هذه البيانات مأخوذة من نظام محاسبي وتشمل القيود المحاسبية والفواتير ودفتر الأستاذ وميزان المراجعة الهدف إعداد تقرير احترافي يركز على كشف المخاطر المالية والحالات غير الطبيعية لدعم الرقابة المالية يشمل التقرير ملخص عام للحالة المالية وتحليل التوازن بين المدين والدائن عبر ميزان المراجعة وتحليل الأرصدة في دفتر الأستاذ ويركز على كشف الحالات غير الطبيعية مثل فواتير بدون قيود قيود بدون ارتباط واضح قيود أو فواتير غير معتمدة اختلاف العملات أو بيانات ناقصة واكتشاف القيم المرتفعة مقارنة بالمتوسط العام أو متوسط العميل وتحديد التغيرات المفاجئة في المصروفات أو الإيرادات وتحليل العمليات عالية المخاطر وتصنيف التنبيهات حسب درجة الخطورة وإبراز الحالات التي تتطلب تدخل فوري مع تقديم توصيات للإدارة لتحسين الرقابة المالية تقليل الأخطاء تعزيز دقة البيانات وتطوير نظام التنبيهات المبكر يجب عرض التقرير منسق واضح وموجه لاتخاذ القرار دون ذكر أي خوارزميات أو تفاصيل تقنية"""
+    full_prompt = report_text + user_prompt + "أريد أن يكون التقرير هو نص HTML فقط فيه تنسيق كافي لعرض البيانات والجداول بشكل أنيق شبيه بتنسق ملفات ال word وملفات ال pdf لا تضيف في البداية ```html وقم بوضع dir='rtl' وأيضًا lang='ar'"
+    response = client.models.generate_content(
+        model="gemma-3-27b-it",
+        contents=full_prompt,
+    )
+
+    output = "".join([p.text for p in response.parts if p.text])
+
+    return HttpResponse(output, content_type="text/html; charset=utf-8")

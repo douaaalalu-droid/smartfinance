@@ -3,8 +3,12 @@ from . import views
 from .views import accounting_period_list
 
 urlpatterns = [
-    path('get_ai_report/', views.get_ai_report, name='get_ai_report'),
+    
     path('', views.login_view, name='login'),
+    path('ai-report/customers/', views.get_ai_report_customers, name='ai_report_customers'),
+    path('ai-report/risks/', views.get_ai_report_risks, name='ai_report_risks'),
+    path('ai-report/summary/', views.get_ai_report_summary, name='ai_report_summary'),
+    
 
 
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
@@ -49,6 +53,7 @@ path('set-currency/', views.set_currency, name='set_currency'),
     views.approve_journal_entry,
     name='approve_journal_entry'
 ),
+
 
 
 ]

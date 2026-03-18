@@ -1,92 +1,86 @@
-{% extends 'dashboard/base.html' %}
-{% load currency_filters %}
+{% extends "dashboard/base.html" %}
+{% load static %}
 
-{% block currency_selector %}
-<form method="get" action="{% url 'set_currency' %}" class="ms-3 d-flex align-items-center gap-2">
-
-    <select name="currency"
-            onchange="this.form.submit()"
-            class="form-select form-select-sm"
-            style="width:150px;">
-
-        <option value="old_syp"
-            {% if request.session.currency == 'old_syp' or not request.session.currency %}selected{% endif %}>
-            ل.س قديمة
-        </option>
-
-        <option value="new_syp"
-            {% if request.session.currency == 'new_syp' %}selected{% endif %}>
-            ل.س جديدة
-        </option>
-
-        <option value="usd"
-            {% if request.session.currency == 'usd' %}selected{% endif %}>
-            دولار
-        </option>
-
-    </select>
-
-    {% if request.session.currency == 'usd' %}
-        <input type="number"
-               step="0.0001"
-               name="exchange_rate"
-               class="form-control form-control-sm"
-               style="width:120px;"
-               placeholder="سعر الصرف"
-               value="{{ request.session.exchange_rate }}"
-               required>
-    {% endif %}
-
-</form>
-{% endblock %}
+{% block title %}لوحة المدير المالي{% endblock %}
 
 {% block content %}
+<div class="container-fluid mt-4">
 
-<h3 class="mb-4">لوحة تحكم المدير المالي</h3>
-<hr>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <h3>📊 لوحة تحكم المدير المالي</h3>
 
-<div class="row mb-4">
-    <a href="{% url 'profit_report' %}" class="btn btn-info">
-📊 تقارير الأرباح
-</a>
+        <div class="dropdown">
+            <button class="btn btn-dark dropdown-toggle" type="button" id="aiReportsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                🤖 التقارير الذكية
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="aiReportsDropdown">
+                <li><a class="dropdown-item" href="{% url 'ai_report_customers' %}">📊 تحليل العملاء</a></li>
+                <li><a class="dropdown-item" href="{% url 'ai_report_risks' %}">⚠️ كشف المخاطر</a></li>
+                <li><a class="dropdown-item" href="{% url 'ai_report_summary' %}">📈 التقرير الشامل</a></li>
+            </ul>
+        </div>
+    </div>
 
-    <div class="col-md-4">
-        <div class="card bg-success text-white text-center">
-            <div class="card-body">
-                <h6>إجمالي الإيرادات</h6>
-               <p class="fs-4">{{ income|currency_display:request }}</p>
+    <hr>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card text-center p-3 shadow-sm">
+                <h5>إجمالي الفواتير</h5>
+                <p class="fs-4">{{ total_invoices|floatformat:2 }}</p>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-center p-3 shadow-sm">
+                <h5>إجمالي القيود المحاسبية</h5>
+                <p class="fs-4">{{ total_journal_entries }}</p>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-center p-3 shadow-sm">
+                <h5>أهم العملاء</h5>
+                <p class="fs-6">{{ top_customers }}</p>
             </div>
         </div>
     </div>
 
-    <div class="col-md-4">
-        <div class="card bg-danger text-white text-center">
-            <div class="card-body">
-                <h6>إجمالي المصروفات</h6>
-               <p class="fs-4">{{ expense|currency_display:request }}</p>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="card bg-primary text-white text-center">
-            <div class="card-body">
-                <h6>صافي الربح</h6>
-               <p class="fs-4">{{ profit|currency_display:request }}</p>
+    <div class="row g-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">أحدث الفواتير</div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>رقم الفاتورة</th>
+                                <th>العميل</th>
+                                <th>التاريخ</th>
+                                <th>المبلغ</th>
+                                <th>الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for invoice in latest_invoices %}
+                            <tr>
+                                <td>{{ invoice.invoice_number }}</td>
+                                <td>{{ invoice.customer_name }}</td>
+                                <td>{{ invoice.invoice_date }}</td>
+                                <td>{{ invoice.total_amount|floatformat:2 }}</td>
+                                <td>{% if invoice.is_approved %}معتمدة{% else %}غير معتمدة{% endif %}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center">لا توجد فواتير حالياً</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
 </div>
-
-<div class="card">
-    <div class="card-header bg-dark text-white">
-        أدوات المدير المالي
-    </div>
-    <div class="card-body">
-        <a href="{% url 'accountant_invoices' %}" class="btn btn-primary me-2">📄 عرض الفواتير</a>
-        <a href="#" class="btn btn-secondary">📊 التقارير</a>
-    </div>
-</div>
-
 {% endblock %}

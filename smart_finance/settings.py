@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'accounts.apps.AccountsConfig',
     'dashboard',
     'finance',
+    
 ]
 
 MIDDLEWARE = [
