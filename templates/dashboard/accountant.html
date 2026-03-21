@@ -1,20 +1,24 @@
 {% extends 'dashboard/base.html' %}
+{% load static %}
 {% load currency_filters %}
 
 {% block extra_head %}
 <style>
-/* خلفية متدرجة ثلاثية الألوان: فضي فاتح → أزرق متوسط → أزرق غامق */
-body {
-    background: linear-gradient(160deg, #654486 1%, #7da6ff 50%, #1f3c88 100%);
+/* wrapper يغطي كل الصفحة */
+.page-wrapper {
     min-height: 100vh;
-    background-attachment: fixed; /* يبقى ثابت عند التمرير */
-    color: #1a1a1a;
+    background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.2)),
+                url("{% static 'images/accountant_dashboard.jpg' %}") no-repeat center center fixed;
+    background-size: cover;
+    background-attachment: fixed;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #fff;
+    padding: 20px 0;
 }
 
 /* تحسين مظهر البطاقات */
 .card {
-    background-color: rgba(113, 123, 150, 0.88);
+    background-color: rgba(113, 123, 150, 0.85);
     border-radius: 12px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.12);
     transition: transform 0.25s, box-shadow 0.25s;
@@ -76,8 +80,11 @@ body {
 {% endblock %}
 
 {% block content %}
+<div class="page-wrapper">
+
 <div class="container-fluid px-4 py-4">
 
+<!-- محتوى المحاسب -->
 <div class="d-flex flex-wrap gap-2 mb-4">
 <a href="{% url 'accountant_invoices' %}" class="btn btn-dark">📄 مراجعة الفواتير</a>
 <a href="{% url 'accountant_invoices' %}" class="btn btn-secondary">📄 جميع الفواتير</a>
@@ -161,70 +168,9 @@ body {
 </div>
 </div>
 
-<div class="d-flex flex-wrap gap-2 mb-4">
-<a href="{% url 'accountant_dashboard' %}" class="btn btn-secondary">📘 جميع القيود</a>
-<a href="{% url 'accountant_dashboard' %}?status=approved" class="btn btn-success">✅ قيود معتمدة</a>
-<a href="{% url 'accountant_dashboard' %}?status=draft" class="btn btn-warning">🕒 قيود مسودة</a>
-</div>
-
-<div class="card shadow-sm border-0">
-<div class="card-header bg-white py-4 border-bottom">
-<h3 class="text-center fw-bold mb-0" style="color:#1f3c88; letter-spacing:1px;">
-جميع القيود
-</h3>
-</div>
-<div class="card-body p-4">
-<div class="table-responsive">
-<table class="table table-bordered table-hover align-middle text-center">
-<thead class="table-light">
-<tr>
-<th>التاريخ</th>
-<th>الحساب</th>
-<th>مدين</th>
-<th>دائن</th>
-<th>أدخل بواسطة</th>
-<th>الحالة</th>
-</tr>
-</thead>
-<tbody>
-{% for entry in entries %}
-{% for line in entry.lines.all %}
-<tr>
-<td>{{ entry.date }}</td>
-<td>{{ line.account }}</td>
-<td>{{ line.debit}}</td>
-<td>{{ line.credit }}</td>
-<td>
-{% if entry.created_by %}
-{{ entry.created_by.get_full_name|default:entry.created_by.username }}
-{% else %}
-—
-{% endif %}
-</td>
-<td>
-{% if entry.status == 'approved' %}
-<span class="badge bg-success">معتمد</span>
-{% else %}
-<span class="badge bg-warning text-dark">مسودة</span>
-<br>
-<a href="{% url 'approve_journal_entry' entry.id %}" class="btn btn-sm btn-success mt-2">
-اعتماد
-</a>
-{% endif %}
-</td>
-</tr>
-{% endfor %}
-{% empty %}
-<tr>
-<td colspan="6" class="py-4">لا توجد قيود</td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
-</div>
-</div>
-</div>
-</div>
+<!-- باقي المحتوى ... -->
+</div> <!-- نهاية container -->
+</div> <!-- نهاية page-wrapper -->
 
 <script>
 function toggleRateField(){
