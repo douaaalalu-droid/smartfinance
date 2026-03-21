@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -12,43 +13,133 @@
 
     <style>
         body {
-            font-family: 'Cairo', sans-serif;
-            background: linear-gradient(135deg, #0d6efd, #0b5ed7);
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+    font-family: 'Cairo', sans-serif;
+
+    /* الخلفية */
+    background: url("{% static 'images/background.png' %}") no-repeat center center fixed;
+    background-size: cover;
+    animation: moveBackground 30s linear infinite;
+
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+/* ضع الأنيميشن خارج body */
+@keyframes moveBackground {
+    0% { background-position: center top; }
+    50% { background-position: center center; }
+    100% { background-position: center top; }
+}
+
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        position: relative;
+        }
+
+        /* طبقة داكنة لتوضيح النص */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0; right: 0; bottom: 0; left: 0;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 0;
         }
 
         .login-card {
-            background-color: #ffffff;
-            border-radius: 10px;
-            padding: 30px;
+            position: relative;
+            z-index: 1;
+            border-radius: 16px;
+            padding: 45px 35px;
             width: 100%;
-            max-width: 400px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 420px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(135deg, #7c7285, #adb9cd);
+            color: #fff;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
         }
 
-        .login-title {
-            text-align: center;
-            margin-bottom: 20px;
+        .login-card:hover {
+            transform: translateY(-7px) scale(1.02);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.4);
         }
 
         .login-title h3 {
-            color: #0d6efd;
-            font-weight: 700;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 7px #fff; }
+            to { text-shadow: 0 0 20px #00ffcc, 0 0 30px #0d6efd; }
+        }
+
+        .login-title p {
+            color: #0d721f;
+            font-size: 20px;
+        }
+
+        .form-control {
+            border-radius: 10px;
+            padding: 14px;
+            border: 2px solid #0d6efd; /* إطار أزرق */
+            background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1));
+            color: #fff; /* نص أبيض */
+            transition: all 0.3s ease;
+            transform: scale(1);
+        }
+
+        .form-control:focus {
+            border-color: #198754; /* إطار أخضر عند التركيز */
+            box-shadow: 0 0 12px rgba(25, 135, 84, 0.4); /* ظل أخضر */
+            outline: none;
+            background: rgba(255,255,255,0.2);
         }
 
         .btn-login {
-            background-color: #198754;
-            color: white;
-            font-weight: 600;
+            background: linear-gradient(90deg, #0d6efd, #198754);
+            border: none;
+            color: #e8e8eb;
+            font-weight: 700;
+            padding: 14px;
+            border-radius: 10px;
+            transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
         }
+
+        .btn-login:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+            background: linear-gradient(90deg, #198754, #0d6efd);
+        }
+
+        .form-control::placeholder {
+            color: #0d3a66;
+            opacity: 0.7;
+        }
+
+        .extra-links a {
+            color: #070b12;
+            text-decoration: none;
+            font-weight: 400;
+             transition: 0.3s;
+              display: inline-block;
+        }
+         .extra-links a:hover {
+    transform: scale(1.1) translateY(-3px);
+    text-shadow: 0 0 10px #00ffcc;
+}
+
     </style>
 </head>
 
 <body>
-
 <div class="login-card">
 
     <div class="login-title">
@@ -64,7 +155,6 @@
 
     <form method="post">
         {% csrf_token %}
-
         <div class="mb-3">
             <label class="form-label">اسم المستخدم</label>
             <input type="text" name="username" class="form-control" required>
@@ -75,12 +165,81 @@
             <input type="password" name="password" class="form-control" required>
         </div>
 
-        <button type="submit" class="btn btn-login w-100">
-            تسجيل الدخول
-        </button>
+        <button type="submit" class="btn btn-login w-100">تسجيل الدخول</button>
     </form>
 
+    <div class="extra-links">
+        <a href="#" id="forgot-password">نسيت كلمة المرور؟</a>
+        <div id="forgot-message" style="
+    display:none;
+    margin-top:15px;
+    padding:12px;
+    border-radius:12px;
+    background: linear-gradient(135deg, #00ffcc, #0d6efd);
+    color:#fff;
+    text-align:center;
+    font-weight:600;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+">
+    🔐لاستعادة كلمة المرور...
 </div>
+    </div>
+
+</div>
+
+<!-- JavaScript للتفاعلات -->
+<script>
+    // تكبير الحقول عند التركيز
+    const inputs = document.querySelectorAll('.form-control');
+    inputs.forEach(input => {
+        input.addEventListener('focus', () => {
+            input.style.transform = 'scale(1.05)';
+            input.style.boxShadow = '0 0 12px rgba(0,255,204,0.5)';
+        });
+        input.addEventListener('blur', () => {
+            input.style.transform = 'scale(1)';
+            input.style.boxShadow = 'none';
+        });
+    });
+
+    // حركة ثلاثية الأبعاد للبطاقة عند تحريك الماوس
+    const card = document.querySelector('.login-card');
+    card.addEventListener('mousemove', e => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+        const rotateX = (y - centerY) / centerY * 5;
+        const rotateY = (x - centerX) / centerX * -5;
+        card.style.transform = `translateY(-5px) scale(1.02) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    });
+    card.addEventListener('mouseleave', () => {
+        card.style.transform = 'translateY(-7px) scale(1.02) rotateX(0) rotateY(0)';
+    });
+    const forgotLink = document.getElementById('forgot-password');
+const forgotMessage = document.getElementById('forgot-message');
+
+forgotLink.addEventListener('click', function(e) {
+    e.preventDefault(); // منع الانتقال
+
+    // إظهار الرسالة
+    forgotMessage.style.display = 'block';
+
+    // تأثير بسيط
+    forgotMessage.style.transform = 'scale(1.05)';
+
+    // إخفاء الرسالة بعد 2 ثواني
+    setTimeout(() => {
+        forgotMessage.style.transform = 'scale(1)';
+    }, 200);
+
+    // (اختياري) تحويل بعد ثانية
+    setTimeout(() => {
+        window.location.href = "#"; // ضع هنا رابط صفحة استعادة كلمة المرور
+    }, 1000);
+});
+</script>
 
 </body>
 </html>
