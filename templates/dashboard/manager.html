@@ -1,11 +1,100 @@
-{% extends "dashboard/base.html" %}
+{% extends "dashboard/base.html" %}  
 {% load static %}
 
 {% block title %}لوحة المدير المالي{% endblock %}
 
 {% block content %}
+<style>
+/* الخلفية الرئيسية مع شفافية و Gradient داكن */
+body {
+    background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.3)),
+                url("{% static 'images/finance_dashboard_bg.jpg' %}") no-repeat center center fixed;
+    background-size: cover;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-position: center;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #fff;
+}
+
+/* كاردات الملخص */
+.card.small-card {
+    border-radius: 15px;
+    padding: 25px;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    background-color: rgba(59, 72, 116, 0.6);
+    color: #fff;
+}
+
+.card.small-card h5 {
+    font-size: 1.4rem;
+    font-weight: 700;
+}
+
+.card.small-card p {
+    font-size: 1.6rem;
+    font-weight: 600;
+}
+
+.card.small-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(51, 49, 49, 0.5);
+}
+
+/* كارد أحدث الفواتير */
+.latest-invoices-card {
+    min-height: 650px;
+    background: linear-gradient(135deg, rgba(0,0,0,0.5), rgba(0,123,255,0.3));
+    border-radius: 20px;
+    padding: 20px;
+    overflow: auto;
+    color: #fff;
+}
+
+/* ترويسة الكارد */
+.latest-invoices-card .card-header {
+    font-weight: 700;
+    font-size: 1.6rem;
+    background-color: rgba(142, 124, 124, 0.5);
+    border-bottom: 2px solid rgba(0,123,255,0.4);
+}
+
+/* جدول الفواتير */
+.latest-invoices-card .table {
+    margin-bottom: 0;
+    font-size: 1.2rem; /* حجم النص أكبر */
+}
+
+.latest-invoices-card .table th,
+.latest-invoices-card .table td {
+    vertical-align: middle;
+    text-align: center;
+    padding: 15px;
+}
+
+/* تحسين رأس الصفحة */
+h3 {
+    font-weight: 700;
+    font-size: 2rem;
+}
+
+/* زر التقارير */
+.dropdown .btn-dark {
+    background-color: #007bff;
+    border-color: #6b1041;
+    font-size: 1.1rem;
+}
+
+.dropdown .btn-dark:hover {
+    background-color: #331d89;
+    border-color: #463261;
+}
+</style>
+
 <div class="container-fluid mt-4">
 
+    <!-- رأس الصفحة -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <h3>📊 لوحة تحكم المدير المالي</h3>
 
@@ -17,42 +106,44 @@
                 <li><a class="dropdown-item" href="{% url 'ai_report_customers' %}">📊 تحليل العملاء</a></li>
                 <li><a class="dropdown-item" href="{% url 'ai_report_risks' %}">⚠️ كشف المخاطر</a></li>
                 <li><a class="dropdown-item" href="{% url 'ai_report_summary' %}">📈 التقرير الشامل</a></li>
-                <li> <a class="dropdown-item" href="{% url 'ai_report_custom' %}">✍️ تحليل مخصص </a></li>
+                <li><a class="dropdown-item" href="{% url 'ai_report_custom' %}">✍️ تحليل مخصص</a></li>
             </ul>
         </div>
     </div>
 
-    <hr>
+    <hr style="border-color: rgba(255,255,255,0.3);">
 
+    <!-- كاردات الملخص -->
     <div class="row g-4 mb-4">
         <div class="col-md-4">
-            <div class="card text-center p-3 shadow-sm">
+            <div class="card small-card shadow-sm">
                 <h5>إجمالي الفواتير</h5>
-                <p class="fs-4">{{ total_invoices|floatformat:2 }}</p>
+                <p>{{ total_invoices|floatformat:2 }}</p>
             </div>
         </div>
 
         <div class="col-md-4">
-            <div class="card text-center p-3 shadow-sm">
+            <div class="card small-card shadow-sm">
                 <h5>إجمالي القيود المحاسبية</h5>
-                <p class="fs-4">{{ total_journal_entries }}</p>
+                <p>{{ total_journal_entries }}</p>
             </div>
         </div>
 
         <div class="col-md-4">
-            <div class="card text-center p-3 shadow-sm">
+            <div class="card small-card shadow-sm">
                 <h5>أهم العملاء</h5>
-                <p class="fs-6">{{ top_customers }}</p>
+                <p>{{ top_customers }}</p>
             </div>
         </div>
     </div>
 
+    <!-- أحدث الفواتير -->
     <div class="row g-4">
         <div class="col-12">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm latest-invoices-card">
                 <div class="card-header">أحدث الفواتير</div>
                 <div class="card-body p-0">
-                    <table class="table table-striped mb-0">
+                    <table class="table table-striped mb-0 table-dark">
                         <thead>
                             <tr>
                                 <th>رقم الفاتورة</th>

@@ -10,11 +10,114 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    <!-- إضافات التنسيق الحديث -->
+    <style>
+    /* تدرج حي للواجهة */
+    body {
+        background: linear-gradient(-45deg, #f0f4ff, #a0c4ff, #1f3c88, #0a1a66);
+        background-size: 400% 400%;
+        animation: gradientBG 20s ease infinite;
+        min-height: 100vh;
+        color: #1a1a1a;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        overflow-x: hidden;
+    }
+
+    @keyframes gradientBG {
+        0% {background-position: 0% 50%;}
+        50% {background-position: 100% 50%;}
+        100% {background-position: 0% 50%;}
+    }
+
+    /* Navbar */
+    .navbar {
+        background: rgba(31, 60, 136, 0.85) !important;
+        backdrop-filter: blur(6px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        transition: background 0.3s;
+    }
+
+    .navbar .navbar-brand {
+        color: #fff;
+        letter-spacing: 1px;
+    }
+
+    .navbar .nav-link, .navbar .btn-outline-light {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .navbar .nav-link:hover, .navbar .btn-outline-light:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    /* Container */
+    .container {
+        padding-top: 1.5rem;
+        padding-bottom: 1.5rem;
+    }
+
+    /* بطاقات المحتوى */
+    .card {
+        background-color: rgba(174, 140, 190, 0.88);
+        border-radius: 12px;
+        box-shadow: 0 6px 25px rgba(0,0,0,0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 35px rgba(0,0,0,0.18);
+    }
+
+    /* الجداول */
+    .table {
+        background-color: rgba(255, 255, 255, 0.95);
+        transition: transform 0.2s;
+    }
+
+    .table-hover tbody tr:hover {
+        transform: translateX(2px);
+        background-color: rgba(240, 244, 255, 0.9);
+    }
+
+    /* أزرار */
+    .btn {
+        transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .btn:hover {
+        transform: scale(1.06);
+        box-shadow: 0 6px 15px rgba(0,0,0,0.18);
+    }
+
+    /* الفورم */
+    .form-label {
+        font-weight: 600;
+        color: #1f3c88;
+    }
+
+    /* تأثير تمرير خفيف */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: rgba(255,255,255,0.1);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background-color: rgba(31,60,136,0.6);
+        border-radius: 10px;
+        border: 2px solid rgba(255,255,255,0.1);
+    }
+    </style>
 </head>
 <body>
 
 <!-- Navbar -->
-<nav class="navbar navbar-dark bg-dark px-4">
+<nav class="navbar navbar-dark px-4">
     <span class="navbar-brand fw-bold">Smart Finance</span>
 
     {% if user.is_authenticated %}

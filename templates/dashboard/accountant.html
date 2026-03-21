@@ -1,76 +1,88 @@
 {% extends 'dashboard/base.html' %}
 {% load currency_filters %}
 
+{% block extra_head %}
+<style>
+/* خلفية متدرجة ثلاثية الألوان: فضي فاتح → أزرق متوسط → أزرق غامق */
+body {
+    background: linear-gradient(160deg, #654486 1%, #7da6ff 50%, #1f3c88 100%);
+    min-height: 100vh;
+    background-attachment: fixed; /* يبقى ثابت عند التمرير */
+    color: #1a1a1a;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* تحسين مظهر البطاقات */
+.card {
+    background-color: rgba(113, 123, 150, 0.88);
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    transition: transform 0.25s, box-shadow 0.25s;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 35px rgba(0,0,0,0.18);
+}
+
+/* تحسين الجدول */
+.table {
+    background-color: rgba(255, 255, 255, 0.95);
+}
+
+.table thead th {
+    background-color: rgba(255, 255, 255, 0.85);
+}
+
+/* تحسين الأزرار */
+.btn {
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.btn:hover {
+    transform: scale(1.06);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.18);
+}
+
+.btn-sm {
+    font-size: 0.85rem;
+}
+
+/* تحسين الفورم */
+.form-label {
+    color: #1f3c88;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
+
 {% block currency_selector %}
 <form method="post" action="{% url 'set_currency' %}" class="ms-3 d-flex align-items-center gap-2">
 {% csrf_token %}
 
-<select id="currency"
-        name="currency"
-        onchange="toggleRateField()"
-        class="form-select form-select-sm"
-        style="width:150px;">
-
-<option value="old_syp"
-{% if request.session.currency == 'old_syp' or not request.session.currency %}selected{% endif %}>
-ل.س قديمة
-</option>
-
-<option value="new_syp"
-{% if request.session.currency == 'new_syp' %}selected{% endif %}>
-ل.س جديدة
-</option>
-
-<option value="usd"
-{% if request.session.currency == 'usd' %}selected{% endif %}>
-دولار
-</option>
-
+<select id="currency" name="currency" onchange="toggleRateField()" class="form-select form-select-sm" style="width:150px;">
+<option value="old_syp" {% if request.session.currency == 'old_syp' or not request.session.currency %}selected{% endif %}>ل.س قديمة</option>
+<option value="new_syp" {% if request.session.currency == 'new_syp' %}selected{% endif %}>ل.س جديدة</option>
+<option value="usd" {% if request.session.currency == 'usd' %}selected{% endif %}>دولار</option>
 </select>
 
-<div id="exchange_rate_container"
-{% if request.session.currency != 'usd' %}style="display:none"{% endif %}>
-
+<div id="exchange_rate_container" {% if request.session.currency != 'usd' %}style="display:none"{% endif %}>
 <label>سعر صرف الدولار</label>
-
-<input type="number"
-       step="0.01"
-       name="exchange_rate"
-       id="exchange_rate"
-       class="form-control form-control-sm"
-       style="width:120px;"
-       placeholder="سعر الصرف"
-       value="{{ request.session.exchange_rate }}">
-
+<input type="number" step="0.01" name="exchange_rate" id="exchange_rate" class="form-control form-control-sm" style="width:120px;" placeholder="سعر الصرف" value="{{ request.session.exchange_rate }}">
 </div>
 
-<button class="btn btn-sm btn-primary">
-تطبيق
-</button>
-
+<button class="btn btn-sm btn-primary">تطبيق</button>
 </form>
 {% endblock %}
 
 {% block content %}
-
 <div class="container-fluid px-4 py-4">
 
 <div class="d-flex flex-wrap gap-2 mb-4">
-<a href="{% url 'accountant_invoices' %}" class="btn btn-dark">
-📄 مراجعة الفواتير
-</a>
-
-<a href="{% url 'accountant_invoices' %}" class="btn btn-secondary">
-📄 جميع الفواتير
-</a>
-
-<a href="{% url 'accountant_invoices' %}?status=approved" class="btn btn-success">
-✅ الفواتير المعتمدة
-</a>
-
-<a href="{% url 'accountant_invoices' %}?status=pending" class="btn btn-warning">
-🕒 فواتير غير معتمدة
-</a>
+<a href="{% url 'accountant_invoices' %}" class="btn btn-dark">📄 مراجعة الفواتير</a>
+<a href="{% url 'accountant_invoices' %}" class="btn btn-secondary">📄 جميع الفواتير</a>
+<a href="{% url 'accountant_invoices' %}?status=approved" class="btn btn-success">✅ الفواتير المعتمدة</a>
+<a href="{% url 'accountant_invoices' %}?status=pending" class="btn btn-warning">🕒 فواتير غير معتمدة</a>
 </div>
 
 <h3 class="mb-4 fw-bold">لوحة المحاسب</h3>
@@ -79,12 +91,10 @@
 <div class="card-header bg-success text-white fw-bold py-3">
 إدخال قيد في دفتر القيود
 </div>
-
 <div class="card-body p-4">
 
 <form method="post">
 {% csrf_token %}
-
 {% if form.non_field_errors %}
 <div class="alert alert-danger">
 {{ form.non_field_errors }}
@@ -92,57 +102,36 @@
 {% endif %}
 
 <div class="row g-4 mb-4">
-
 <div class="col-lg-3 col-md-4">
 <label class="form-label fw-bold">التاريخ</label>
 {{ form.date }}
 </div>
-
 <div class="col-lg-6 col-md-8">
 <label class="form-label fw-bold">الوصف</label>
 {{ form.description }}
 </div>
-
 <div class="col-lg-3 col-md-6">
-<label class="form-label fw-bold">الفترة المحاسبية</label>
+<label class="form-label fw-bold"></label>
 {{ form.period }}
-
 {% if form.period.errors %}
 <div class="text-danger small mt-1">
 {{ form.period.errors }}
 </div>
 {% endif %}
-
+</div>
 </div>
 
-</div>
-
-<div class="row g-4 mb-4"
-id="exchangeRateContainer"
-{% if request.session.currency != 'usd' %}style="display:none"{% endif %}>
-
+<div class="row g-4 mb-4" id="exchangeRateContainer" {% if request.session.currency != 'usd' %}style="display:none"{% endif %}>
 <div class="col-lg-3 col-md-4">
-
 <label class="form-label fw-bold">سعر صرف الدولار</label>
-
-<input type="number"
-step="0.0001"
-name="exchange_rate"
-id="exchange_rate"
-class="form-control"
-placeholder="أدخل سعر الصرف"
-value="{{ request.session.exchange_rate }}">
-
+<input type="number" step="0.0001" name="exchange_rate" id="exchange_rate" class="form-control" placeholder="أدخل سعر الصرف" value="{{ request.session.exchange_rate }}">
 </div>
-
 </div>
 
 {{ formset.management_form }}
 
 <div class="table-responsive mb-4">
-
 <table class="table table-bordered table-hover align-middle text-center">
-
 <thead class="table-light">
 <tr>
 <th style="width:30%">الحساب</th>
@@ -151,71 +140,43 @@ value="{{ request.session.exchange_rate }}">
 <th style="width:10%">حذف</th>
 </tr>
 </thead>
-
 <tbody>
-
 {% for line in formset %}
-
 <tr>
 <td>{{ line.account }}</td>
 <td>{{ line.debit}}</td>
 <td>{{ line.credit }}</td>
 <td>{{ line.DELETE }}</td>
 </tr>
-
 {% endfor %}
-
 </tbody>
-
 </table>
-
 </div>
 
 <div class="text-end">
-
-<button class="btn btn-primary px-5 py-2">
-💾 حفظ القيد
-</button>
-
+<button class="btn btn-primary px-5 py-2">💾 حفظ القيد</button>
 </div>
-
 </form>
 
 </div>
 </div>
 
 <div class="d-flex flex-wrap gap-2 mb-4">
-
-<a href="{% url 'accountant_dashboard' %}" class="btn btn-secondary">
-📘 جميع القيود
-</a>
-
-<a href="{% url 'accountant_dashboard' %}?status=approved" class="btn btn-success">
-✅ قيود معتمدة
-</a>
-
-<a href="{% url 'accountant_dashboard' %}?status=draft" class="btn btn-warning">
-🕒 قيود مسودة
-</a>
-
+<a href="{% url 'accountant_dashboard' %}" class="btn btn-secondary">📘 جميع القيود</a>
+<a href="{% url 'accountant_dashboard' %}?status=approved" class="btn btn-success">✅ قيود معتمدة</a>
+<a href="{% url 'accountant_dashboard' %}?status=draft" class="btn btn-warning">🕒 قيود مسودة</a>
 </div>
 
 <div class="card shadow-sm border-0">
-
 <div class="card-header bg-white py-4 border-bottom">
 <h3 class="text-center fw-bold mb-0" style="color:#1f3c88; letter-spacing:1px;">
 جميع القيود
 </h3>
 </div>
-
 <div class="card-body p-4">
-
 <div class="table-responsive">
-
 <table class="table table-bordered table-hover align-middle text-center">
-
 <thead class="table-light">
-
 <tr>
 <th>التاريخ</th>
 <th>الحساب</th>
@@ -224,105 +185,60 @@ value="{{ request.session.exchange_rate }}">
 <th>أدخل بواسطة</th>
 <th>الحالة</th>
 </tr>
-
 </thead>
-
 <tbody>
-
 {% for entry in entries %}
 {% for line in entry.lines.all %}
-
 <tr>
-
 <td>{{ entry.date }}</td>
-
 <td>{{ line.account }}</td>
-
 <td>{{ line.debit}}</td>
-
-<td>{{ line.credit}}</td>
-
+<td>{{ line.credit }}</td>
 <td>
-
 {% if entry.created_by %}
 {{ entry.created_by.get_full_name|default:entry.created_by.username }}
 {% else %}
 —
 {% endif %}
-
 </td>
-
 <td>
-
 {% if entry.status == 'approved' %}
-
 <span class="badge bg-success">معتمد</span>
-
 {% else %}
-
 <span class="badge bg-warning text-dark">مسودة</span>
-
 <br>
-
-<a href="{% url 'approve_journal_entry' entry.id %}"
-class="btn btn-sm btn-success mt-2">
-
+<a href="{% url 'approve_journal_entry' entry.id %}" class="btn btn-sm btn-success mt-2">
 اعتماد
-
 </a>
-
 {% endif %}
-
 </td>
-
 </tr>
-
 {% endfor %}
 {% empty %}
-
 <tr>
-
-<td colspan="6" class="py-4">
-
-لا توجد قيود
-
-</td>
-
+<td colspan="6" class="py-4">لا توجد قيود</td>
 </tr>
-
 {% endfor %}
-
 </tbody>
-
 </table>
-
 </div>
-
 </div>
-
 </div>
-
 </div>
 
 <script>
-
 function toggleRateField(){
-
 let currency = document.getElementById("currency").value
 let rate = document.getElementById("exchange_rate_container")
-
 if(currency === "usd"){
 rate.style.display = "block"
 }else{
 rate.style.display = "none"
 }
-
 }
-
 document.addEventListener("DOMContentLoaded",function(){
 toggleRateField()
 })
-
 </script>
 
 {% endblock %}
